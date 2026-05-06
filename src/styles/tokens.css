@@ -1,0 +1,93 @@
+:root {
+  --color-bg: #ffffff;
+  --color-fg: #111827;
+  --color-fg-muted: #4b5563;
+  --color-surface: #f9fafb;
+  --color-surface-2: #f3f4f6;
+  --color-border: #d1d5db;
+  --color-border-strong: #9ca3af;
+
+  --color-accent: #2563eb;
+  --color-accent-fg: #ffffff;
+  --color-accent-soft: #dbeafe;
+
+  --color-danger: #dc2626;
+  --color-danger-fg: #ffffff;
+  --color-danger-soft: #fee2e2;
+
+  --color-success: #16a34a;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+
+  --touch-min: 48px;
+
+  /* Team palette — paired text-on color provided for contrast */
+  --team-color-red: #dc2626;        --team-color-red-on: #ffffff;
+  --team-color-green: #16a34a;      --team-color-green-on: #ffffff;
+  --team-color-orange: #ea580c;     --team-color-orange-on: #ffffff;
+  --team-color-purple: #9333ea;     --team-color-purple-on: #ffffff;
+  --team-color-teal: #0d9488;       --team-color-teal-on: #ffffff;
+  --team-color-pink: #db2777;       --team-color-pink-on: #ffffff;
+  --team-color-yellow: #ca8a04;     --team-color-yellow-on: #ffffff;
+  --team-color-cyan: #0891b2;       --team-color-cyan-on: #ffffff;
+
+  /* Board theme — traditional default */
+  --board-bg: #1a1a1a;
+  --board-ring-outer: #0a0a0a;
+  --board-number-fg: #ffffff;
+  --board-segment-light: #f5e9c2;       /* cream */
+  --board-segment-dark: #1a1a1a;        /* black */
+  --board-double-light: #f04444;        /* red */
+  --board-double-dark: #1f8a3b;         /* green */
+  --board-triple-light: #f04444;
+  --board-triple-dark: #1f8a3b;
+  --board-bull-outer: #1f8a3b;
+  --board-bull-inner: #f04444;
+  --board-miss-bg: #0a0a0a;
+  --board-miss-fg: #ffffff;
+  --board-segment-stroke: #000000;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0b0f17;
+    --color-fg: #f3f4f6;
+    --color-fg-muted: #9ca3af;
+    --color-surface: #111827;
+    --color-surface-2: #1f2937;
+    --color-border: #374151;
+    --color-border-strong: #4b5563;
+
+    --color-accent: #3b82f6;
+    --color-accent-soft: #1e3a8a;
+
+    --color-danger: #ef4444;
+    --color-danger-soft: #7f1d1d;
+  }
+}

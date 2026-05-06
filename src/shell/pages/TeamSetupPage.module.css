@@ -1,0 +1,119 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.header h1 {
+  margin: 0;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.help {
+  color: var(--color-fg-muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.teamList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.teamCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.teamHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.teamName {
+  flex: 1;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.swatches {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.swatch,
+.swatchActive {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatchActive {
+  border-color: var(--color-fg);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.playerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.playerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.playerNum {
+  width: 28px;
+  text-align: right;
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.playerName {
+  flex: 1;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}

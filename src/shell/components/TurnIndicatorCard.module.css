@@ -1,0 +1,80 @@
+.card {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  min-height: 80px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stripe {
+  width: 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.teamRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.teamName {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.player {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}
+
+.pips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.pipFilled,
+.pipEmpty {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--color-fg-muted);
+}
+
+.pipFilled {
+  background: var(--color-fg);
+  border-color: var(--color-fg);
+}
+
+.pipEmpty {
+  background: transparent;
+}
+
+.remaining {
+  font-size: var(--text-sm);
+  color: var(--color-fg-muted);
+  margin-left: var(--space-2);
+}

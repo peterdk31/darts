@@ -1,0 +1,68 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-top: var(--space-6);
+}
+
+.header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.kicker {
+  margin: 0;
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: var(--text-sm);
+}
+
+.headline {
+  margin: 0;
+  font-size: var(--text-3xl);
+}
+
+.winners {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.winnerCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 3px solid;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  font-size: var(--text-2xl);
+}
+
+.badge {
+  display: inline-flex;
+  padding: 4px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.name {
+  font-weight: 700;
+}
+
+.crown {
+  font-size: var(--text-2xl);
+  color: var(--color-accent);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
