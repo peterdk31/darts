@@ -7,32 +7,29 @@ import {
 } from "./engine";
 import { ScoreboardPanel } from "./ui/ScoreboardPanel";
 
-const X01_SCHEMA_VERSION = 1;
-
-const settings = [
-  { key: "doubleOut", label: "Double-out", type: "toggle" as const, default: false },
-  { key: "doubleIn", label: "Double-in", type: "toggle" as const, default: false },
-];
-
-export const x501Manifest: GameManifest<X01EngineState> = {
-  id: "x01.501",
-  displayName: "501",
+export const x01Manifest: GameManifest<X01EngineState> = {
+  id: "x01",
+  displayName: "X01",
   dartsPerPlayer: 3,
-  settingsSchema: settings,
-  schemaVersion: X01_SCHEMA_VERSION,
-  init: (ctx) => initX01(ctx, { startingScore: 501 }),
-  applyThrow: applyThrowX01,
-  selectScoreboard: selectScoreboardX01,
-  view: (props) => ScoreboardPanel(props),
-};
-
-export const x301Manifest: GameManifest<X01EngineState> = {
-  id: "x01.301",
-  displayName: "301",
-  dartsPerPlayer: 3,
-  settingsSchema: settings,
-  schemaVersion: X01_SCHEMA_VERSION,
-  init: (ctx) => initX01(ctx, { startingScore: 301 }),
+  settingsSchema: [
+    {
+      key: "startingScore",
+      label: "Starting score",
+      type: "choice",
+      default: "501",
+      constraints: {
+        choices: [
+          { value: "301", label: "301" },
+          { value: "501", label: "501" },
+          { value: "701", label: "701" },
+        ],
+      },
+    },
+    { key: "doubleOut", label: "Double-out", type: "toggle" as const, default: false },
+    { key: "doubleIn", label: "Double-in", type: "toggle" as const, default: false },
+  ],
+  schemaVersion: 1,
+  init: (ctx) => initX01(ctx, { startingScore: Number(ctx.resolvedSettings["startingScore"]) }),
   applyThrow: applyThrowX01,
   selectScoreboard: selectScoreboardX01,
   view: (props) => ScoreboardPanel(props),

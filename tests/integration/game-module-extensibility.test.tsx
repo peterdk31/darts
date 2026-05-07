@@ -69,8 +69,7 @@ describe("game module extensibility (Principle I)", () => {
 
   it("renders the phantom manifest on GameSelectPage alongside real games", () => {
     render(<GameSelectPage />);
-    expect(screen.getByText("501")).toBeInTheDocument();
-    expect(screen.getByText("301")).toBeInTheDocument();
+    expect(screen.getByText("X01")).toBeInTheDocument();
     expect(screen.getByText("Cricket")).toBeInTheDocument();
     expect(screen.getByText("Around the Clock")).toBeInTheDocument();
     expect(screen.getByText("Phantom Example")).toBeInTheDocument();

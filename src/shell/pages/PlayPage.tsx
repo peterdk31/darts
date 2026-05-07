@@ -16,6 +16,7 @@ import type {
 } from "@/shell/session/types";
 import type { ScoreboardHit, ThrowEffect } from "@/shared/types/game-module";
 import type { ThrowRecord, ThrowSegment } from "@/shared/types/core";
+import { computeWinSummary } from "@/shell/stats/computeWinSummary";
 import styles from "./PlayPage.module.css";
 
 function deriveTurnDots(
@@ -115,10 +116,12 @@ export function PlayPage() {
         teams: game.teams,
         winnerTeamIds: replay.winnerTeamIds,
         completedAt: new Date().toISOString(),
-        summary: replay.winSummary,
+        summary: computeWinSummary(
+          game.gameTypeId, game.teams, replay.winnerTeamIds, game.throws, replay.engineState,
+        ),
       };
       dispatch({ type: "recordCompletedGame", record });
-      navigate("/end");
+      navigate("/end", { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.id]);
@@ -183,6 +186,7 @@ export function PlayPage() {
       );
       if (winnerEff) {
         winRecorded.current = game.id;
+        const allThrows = [...game.throws, throwRecord];
         const record: CompletedGameRecord = {
           id: game.id,
           gameTypeId: game.gameTypeId,
@@ -190,10 +194,12 @@ export function PlayPage() {
           teams: game.teams,
           winnerTeamIds: winnerEff.winnerTeamIds,
           completedAt: new Date().toISOString(),
-          summary: winnerEff.summary,
+          summary: computeWinSummary(
+            game.gameTypeId, game.teams, winnerEff.winnerTeamIds, allThrows, r.state,
+          ),
         };
         dispatch({ type: "recordCompletedGame", record });
-        navigate("/end");
+        navigate("/end", { replace: true });
       }
     }
   }
@@ -370,10 +376,12 @@ export function PlayPage() {
         teams: game.teams,
         winnerTeamIds: replay.winnerTeamIds,
         completedAt: new Date().toISOString(),
-        summary: replay.winSummary,
+        summary: computeWinSummary(
+          game.gameTypeId, game.teams, replay.winnerTeamIds, newThrows, replay.engineState,
+        ),
       };
       dispatch({ type: "recordCompletedGame", record });
-      navigate("/end");
+      navigate("/end", { replace: true });
     }
   }
 

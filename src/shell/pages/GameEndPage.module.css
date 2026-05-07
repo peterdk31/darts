@@ -9,7 +9,7 @@
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .kicker {
@@ -25,11 +25,117 @@
   font-size: var(--text-3xl);
 }
 
-.winners {
+.dartCount {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-size: var(--text-sm);
+}
+
+/* Rankings section */
+.rankings {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.rankCard {
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rankCard.winner {
+  border-width: 3px;
+  box-shadow: var(--shadow-md);
+}
+
+.rankHeader {
+  display: flex;
   align-items: center;
+  gap: var(--space-3);
+}
+
+.rankOrdinal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  background: var(--color-surface-2);
+  color: var(--color-fg-muted);
+}
+
+.teamName {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  flex: 1;
+}
+
+.crown {
+  font-size: var(--text-2xl);
+  color: var(--color-accent);
+}
+
+.rankLabel {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-size: var(--text-sm);
+}
+
+.playerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.playerRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  padding: var(--space-1) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.playerRow:first-child {
+  border-top: none;
+}
+
+.playerName {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerStats {
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* Fallback (old records without summary) */
+.fallbackWinners {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.fallbackTitle {
+  margin: 0;
+  font-size: var(--text-2xl);
 }
 
 .winnerCard {
@@ -51,15 +157,7 @@
   font-weight: 700;
 }
 
-.name {
-  font-weight: 700;
-}
-
-.crown {
-  font-size: var(--text-2xl);
-  color: var(--color-accent);
-}
-
+/* Actions */
 .actions {
   display: flex;
   gap: var(--space-3);

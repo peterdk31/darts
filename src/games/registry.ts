@@ -1,5 +1,5 @@
 import type { GameManifest } from "@/shared/types/game-module";
-import { x501Manifest, x301Manifest } from "./x01/manifest";
+import { x01Manifest } from "./x01/manifest";
 import { cricketManifest } from "./cricket/manifest";
 import { aroundTheClockManifest } from "./around-the-clock/manifest";
 import { mickeyMouseManifest } from "./mickey-mouse/manifest";
@@ -10,8 +10,7 @@ import { mickeyMouseManifest } from "./mickey-mouse/manifest";
 type AnyManifest = GameManifest<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 const MANIFESTS: AnyManifest[] = [
-  x501Manifest,
-  x301Manifest,
+  x01Manifest,
   cricketManifest,
   aroundTheClockManifest,
   mickeyMouseManifest,

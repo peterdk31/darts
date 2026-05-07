@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getById } from "@/games/registry";
 import { Button } from "@/shared/components/Button";
 import { useNavigate, useParams } from "@/shared/routing/router";
@@ -32,6 +32,11 @@ export function GameSettingsPage() {
     manifest ? defaultsFor(manifest.settingsSchema) : {},
   );
   const [pendingStart, setPendingStart] = useState(false);
+  const skipSettings = manifest != null && manifest.settingsSchema.length === 0;
+
+  useEffect(() => {
+    if (skipSettings) startGame();
+  }, [skipSettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!manifest) {
     return (
@@ -97,16 +102,26 @@ export function GameSettingsPage() {
     navigate("/play");
   }
 
+  if (skipSettings) {
+    return (
+      <AbandonConfirmModal
+        open={pendingStart}
+        onConfirm={doStart}
+        onCancel={() => {
+          setPendingStart(false);
+          navigate("/play");
+        }}
+      />
+    );
+  }
+
   return (
     <div className={styles.page}>
       <header>
         <h1>{manifest.displayName} settings</h1>
       </header>
 
-      {manifest.settingsSchema.length === 0 ? (
-        <p className={styles.empty}>No settings to configure.</p>
-      ) : (
-        <ul className={styles.list}>
+      <ul className={styles.list}>
           {manifest.settingsSchema.map((s) => {
             const val = settings[s.key];
             if (s.type === "toggle") {
@@ -159,8 +174,7 @@ export function GameSettingsPage() {
               </li>
             );
           })}
-        </ul>
-      )}
+      </ul>
 
       <div className={styles.actions}>
         <Button variant="ghost" onClick={() => navigate("/game-select")}>

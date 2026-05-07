@@ -11,11 +11,11 @@ import {
   replayAll,
 } from "@/shell/session/replay";
 import type { InProgressGame } from "@/shell/session/types";
-import { x501Manifest } from "@/games/x01/manifest";
+import { x01Manifest } from "@/games/x01/manifest";
 import type { GameManifest } from "@/shared/types/game-module";
 import type { Team, ThrowRecord } from "@/shared/types/core";
 
-const manifest = x501Manifest as unknown as GameManifest;
+const manifest = x01Manifest as unknown as GameManifest;
 
 function makeTeams(): Team[] {
   return [
@@ -57,12 +57,13 @@ function bootstrapGame(): InProgressGame {
   const playerRotation: Record<string, string[]> = { A: ["A1"], B: ["B1"] };
   const dartsPerPlayer = 3;
   const teamMax = 1;
-  const initCtx = makeInitContext(teams, { doubleOut: false, doubleIn: false }, dartsPerPlayer, teamMax);
+  const resolvedSettings = { startingScore: "501", doubleOut: false, doubleIn: false };
+  const initCtx = makeInitContext(teams, resolvedSettings, dartsPerPlayer, teamMax);
   const engineState = manifest.init(initCtx);
   return {
     id: "g1",
     gameTypeId: manifest.id,
-    resolvedSettings: { doubleOut: false, doubleIn: false },
+    resolvedSettings,
     teams,
     dartsPerPlayer,
     maxTeamSize: teamMax,
