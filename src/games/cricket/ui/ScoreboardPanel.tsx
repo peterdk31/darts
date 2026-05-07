@@ -1,5 +1,6 @@
 import type { ResolvedSettings, ScoreboardHit } from "@/shared/types/game-module";
 import type { Team } from "@/shared/types/core";
+import { getTeamLabel } from "@/shared/teams/teamLabel";
 import { type CricketEngineState, type CricketTarget, CRICKET_TARGETS } from "../engine";
 import styles from "./ScoreboardPanel.module.css";
 
@@ -38,7 +39,7 @@ export function ScoreboardPanel({ state, teams, onScoreboardHit }: Props) {
                   className={styles.dot}
                   style={{ background: `var(--team-color-${t.colorId})` }}
                 />
-                <span>{t.displayName}</span>
+                <span>{getTeamLabel(t)}</span>
                 <span className={styles.score}>
                   {state.scoreByTeam[t.id] ?? 0}
                 </span>

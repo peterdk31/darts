@@ -1,5 +1,6 @@
 import type { ResolvedSettings } from "@/shared/types/game-module";
 import type { Team } from "@/shared/types/core";
+import { getTeamLabel } from "@/shared/teams/teamLabel";
 import { type ATCEngineState } from "../engine";
 import styles from "./ScoreboardPanel.module.css";
 
@@ -26,7 +27,7 @@ export function ScoreboardPanel({ state, teams }: Props) {
                 className={styles.dot}
                 style={{ background: `var(--team-color-${t.colorId})` }}
               />
-              <span className={styles.name}>{t.displayName}</span>
+              <span className={styles.name}>{getTeamLabel(t)}</span>
               <span className={styles.next}>
                 next: {progress < 21 ? ATC_LABELS[progress] : "DONE"}
               </span>

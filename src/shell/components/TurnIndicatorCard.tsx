@@ -1,9 +1,10 @@
 import type { Team } from "@/shared/types/core";
+import { getTeamLabel } from "@/shared/teams/teamLabel";
+import { COLOR_LABELS } from "@/shared/teams/colors";
 import styles from "./TurnIndicatorCard.module.css";
 
 interface Props {
   team: Team;
-  teamNumber: number; // 1-based
   player: { id: string; displayName: string };
   dartsThrownThisTurn: number;
   dartsAllotmentForPlayer: number;
@@ -11,7 +12,6 @@ interface Props {
 
 export function TurnIndicatorCard({
   team,
-  teamNumber,
   player,
   dartsThrownThisTurn,
   dartsAllotmentForPlayer,
@@ -35,9 +35,9 @@ export function TurnIndicatorCard({
           background: `var(--team-color-${team.colorId})`,
           color: `var(--team-color-${team.colorId}-on)`,
         }}
-        aria-label={`Team ${teamNumber}: ${team.displayName}`}
+        aria-label={`${COLOR_LABELS[team.colorId]} Team: ${getTeamLabel(team)}`}
       >
-        T{teamNumber}
+        {COLOR_LABELS[team.colorId]}
       </span>
       <span className={styles.player}>{player.displayName}</span>
       <span

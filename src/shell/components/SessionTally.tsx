@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import type { Team } from "@/shared/types/core";
+import { getTeamLabel } from "@/shared/teams/teamLabel";
+import { COLOR_LABELS } from "@/shared/teams/colors";
 import type { CompletedGameRecord } from "@/shell/session/types";
 import styles from "./SessionTally.module.css";
 
@@ -27,7 +29,7 @@ export function SessionTally({ teams, history, title = "Session wins" }: Props) 
     <section className={styles.tally} aria-label={title}>
       <h2 className={styles.title}>{title}</h2>
       <ul className={styles.list}>
-        {teams.map((t, idx) => (
+        {teams.map((t) => (
           <li key={t.id} className={styles.row}>
             <span
               className={styles.stripe}
@@ -41,9 +43,9 @@ export function SessionTally({ teams, history, title = "Session wins" }: Props) 
                 color: `var(--team-color-${t.colorId}-on)`,
               }}
             >
-              Team {idx + 1}
+              {COLOR_LABELS[t.colorId]}
             </span>
-            <span className={styles.name}>{t.displayName}</span>
+            <span className={styles.name}>{getTeamLabel(t)}</span>
             <span className={styles.count} aria-label={`${wins[t.id] ?? 0} wins`}>
               {wins[t.id] ?? 0}
             </span>

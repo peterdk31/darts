@@ -5,6 +5,8 @@ import { useNavigate } from "@/shared/routing/router";
 import { useSession } from "@/shell/session/useSession";
 import { SessionTally } from "@/shell/components/SessionTally";
 import { getById } from "@/games/registry";
+import { getTeamLabel } from "@/shared/teams/teamLabel";
+import { COLOR_LABELS } from "@/shared/teams/colors";
 import type { CompletedGameRecord } from "@/shell/session/types";
 import type {
   ResolvedSettings,
@@ -70,7 +72,8 @@ export function HistoryPage() {
         <h1 className={styles.title}>Session history</h1>
         <Button
           variant="ghost"
-          onClick={() => navigate(state.inProgressGame ? "/play" : "/")}
+          size="sm"
+          onClick={() => navigate(state.inProgressGame ? "/play" : "/games")}
         >
           ← Back
         </Button>
@@ -164,9 +167,7 @@ function HistoryRow({ record }: { record: CompletedGameRecord }) {
         </span>
       </div>
       <div className={styles.winners}>
-        {winners.map((t) => {
-          const teamIndex = record.teams.findIndex((tx) => tx.id === t.id);
-          return (
+        {winners.map((t) => (
             <span
               key={t.id}
               className={styles.winnerChip}
@@ -175,11 +176,10 @@ function HistoryRow({ record }: { record: CompletedGameRecord }) {
                 color: `var(--team-color-${t.colorId}-on)`,
               }}
             >
-              <span className={styles.winnerBadge}>Team {teamIndex + 1}</span>
-              <span className={styles.winnerName}>{t.displayName}</span>
+              <span className={styles.winnerBadge}>{COLOR_LABELS[t.colorId]}</span>
+              <span className={styles.winnerName}>{getTeamLabel(t)}</span>
             </span>
-          );
-        })}
+        ))}
       </div>
       {settingsSummary && (
         <p className={styles.settings}>{settingsSummary}</p>

@@ -3,14 +3,14 @@
 This file gives AI assistants and human contributors a fast pointer into the active specification work for this repository.
 
 <!-- SPECKIT START -->
-**Active feature plan**: [specs/001-dart-game-tracker/plan.md](specs/001-dart-game-tracker/plan.md)
+**Active feature plan**: [specs/003-player-registry/plan.md](specs/003-player-registry/plan.md)
 
 Companion artifacts:
-- Feature spec: [specs/001-dart-game-tracker/spec.md](specs/001-dart-game-tracker/spec.md)
-- Phase 0 research: [specs/001-dart-game-tracker/research.md](specs/001-dart-game-tracker/research.md)
-- Data model: [specs/001-dart-game-tracker/data-model.md](specs/001-dart-game-tracker/data-model.md)
-- Contracts: [specs/001-dart-game-tracker/contracts/](specs/001-dart-game-tracker/contracts/)
-- Quickstart: [specs/001-dart-game-tracker/quickstart.md](specs/001-dart-game-tracker/quickstart.md)
+- Feature spec: [specs/003-player-registry/spec.md](specs/003-player-registry/spec.md)
+- Phase 0 research: [specs/003-player-registry/research.md](specs/003-player-registry/research.md)
+- Data model: [specs/003-player-registry/data-model.md](specs/003-player-registry/data-model.md)
+- Contracts: [specs/003-player-registry/contracts/](specs/003-player-registry/contracts/)
+- Quickstart: [specs/003-player-registry/quickstart.md](specs/003-player-registry/quickstart.md)
 
 Project constitution: [.specify/memory/constitution.md](.specify/memory/constitution.md) (v1.0.0).
 <!-- SPECKIT END -->

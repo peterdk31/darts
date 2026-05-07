@@ -1,5 +1,6 @@
 import type { ResolvedSettings } from "@/shared/types/game-module";
 import type { Team } from "@/shared/types/core";
+import { getTeamLabel } from "@/shared/teams/teamLabel";
 import { allotmentForPlayer } from "@/shared/dart-allotment";
 import type { X01EngineState } from "../engine";
 import { computeCheckout, formatCheckout } from "../checkout";
@@ -61,7 +62,7 @@ export function ScoreboardPanel({ state, resolvedSettings, teams }: Props) {
               style={{ background: `var(--team-color-${t.colorId})` }}
               aria-hidden="true"
             />
-            <span className={styles.name}>{t.displayName}</span>
+            <span className={styles.name}>{getTeamLabel(t)}</span>
             <span className={styles.score}>{state.scoreByTeam[t.id] ?? 0}</span>
           </li>
         ))}

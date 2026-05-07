@@ -20,6 +20,20 @@ export interface Team {
   players: Player[];
 }
 
+export interface RosterPlayer {
+  id: string;
+  displayName: string;
+  createdAt: string;
+  deletedAt: string | null;
+}
+
+export interface PersistedTeam {
+  id: string;
+  displayName: string;
+  colorId: TeamColorId;
+  playerIds: string[];
+}
+
 export type ThrowSegment = number | "outer-bull" | "inner-bull" | "miss";
 
 export interface ThrowRecord {

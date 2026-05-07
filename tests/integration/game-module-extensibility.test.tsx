@@ -55,6 +55,22 @@ vi.mock("@/shell/session/useSession", () => ({
   }),
 }));
 
+vi.mock("@/shell/session/SessionContext", () => ({
+  useSessionContext: () => ({
+    activeSession: { id: "test", name: "Test", createdAt: new Date().toISOString() },
+    sessions: [],
+    openSession: () => {},
+    createSession: () => "test",
+    deleteSession: () => {},
+    leaveSession: () => {},
+    state: { teams: [], inProgressGame: null, history: [] },
+    dispatch: () => {},
+    prefs: {},
+    setPrefs: () => {},
+    reportStorageError: () => {},
+  }),
+}));
+
 vi.mock("@/shared/routing/router", () => ({
   useNavigate: () => () => {},
 }));

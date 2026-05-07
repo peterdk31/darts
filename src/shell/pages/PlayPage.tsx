@@ -16,6 +16,7 @@ import type {
 } from "@/shell/session/types";
 import type { ScoreboardHit, ThrowEffect } from "@/shared/types/game-module";
 import type { ThrowRecord, ThrowSegment } from "@/shared/types/core";
+import { getTeamLabel } from "@/shared/teams/teamLabel";
 import { computeWinSummary } from "@/shell/stats/computeWinSummary";
 import styles from "./PlayPage.module.css";
 
@@ -130,7 +131,7 @@ export function PlayPage() {
     return (
       <div className={styles.page}>
         <p>No game in progress.</p>
-        <Button variant="primary" onClick={() => navigate("/game-select")}>
+        <Button variant="primary" onClick={() => navigate("/games")}>
           Pick a game
         </Button>
       </div>
@@ -138,7 +139,6 @@ export function PlayPage() {
   }
 
   const currentTeam = game.teams.find((t) => t.id === game.currentTurn.teamId)!;
-  const teamNumber = game.turnOrder.indexOf(currentTeam.id) + 1;
   const currentPlayer = currentTeam.players.find(
     (p) => p.id === game.currentTurn.playerId,
   )!;
@@ -390,7 +390,6 @@ export function PlayPage() {
       <div className={styles.topRow}>
         <TurnIndicatorCard
           team={currentTeam}
-          teamNumber={teamNumber}
           player={currentPlayer}
           dartsThrownThisTurn={game.currentTurn.dartsThrownThisTurn}
           dartsAllotmentForPlayer={allotment}
@@ -485,7 +484,7 @@ export function PlayPage() {
         onConfirm={() => {
           setAbandonOpen(false);
           dispatch({ type: "discardInProgressGame" });
-          navigate("/game-select");
+          navigate("/games");
         }}
       />
     </div>
@@ -510,7 +509,7 @@ function DefaultScoreboard({
               className={styles.scoreDot}
               style={{ background: `var(--team-color-${team.colorId})` }}
             />
-            <span className={styles.scoreName}>{team.displayName}</span>
+            <span className={styles.scoreName}>{getTeamLabel(team)}</span>
             <span className={styles.scoreValue}>{row.primary}</span>
           </li>
         );
