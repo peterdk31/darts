@@ -11,7 +11,7 @@ import { ScoreboardPanel } from "./ui/ScoreboardPanel";
 const settings: SettingDefinition[] = [
   {
     key: "dtAbove15Only",
-    label: "D/T only 16 and above",
+    label: "D/T only 15 and above",
     type: "toggle",
     default: false,
   },

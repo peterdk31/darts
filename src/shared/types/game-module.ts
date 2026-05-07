@@ -74,6 +74,12 @@ export type DartSegment =
 export interface BoardHints {
   highlight?: ReadonlyArray<DartSegment>;
   dim?: ReadonlyArray<DartSegment>;
+  /** Highlight only the double ring for these segments. */
+  highlightDoubles?: ReadonlyArray<DartSegment>;
+  /** Highlight only the triple ring for these segments. */
+  highlightTriples?: ReadonlyArray<DartSegment>;
+  /** Highlight only the inner bull (e.g. counts as a double). */
+  highlightBullInner?: boolean;
 }
 
 export interface ScoreboardHit {

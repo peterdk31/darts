@@ -79,7 +79,7 @@ export function computeRoundPoints(
         if (
           dtAbove15Only &&
           typeof throw_.segment === "number" &&
-          throw_.segment <= 15
+          throw_.segment <= 14
         ) {
           return { points: 0, hit: false };
         }
@@ -95,7 +95,7 @@ export function computeRoundPoints(
         if (
           dtAbove15Only &&
           typeof throw_.segment === "number" &&
-          throw_.segment <= 15
+          throw_.segment <= 14
         ) {
           return { points: 0, hit: false };
         }
@@ -365,6 +365,11 @@ export function selectScoreboardLumberjack(
   };
 }
 
+const ALL_SEGMENTS: DartSegment[] = [
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+];
+const SEGMENTS_15_PLUS: DartSegment[] = [15, 16, 17, 18, 19, 20];
+
 export function getBoardHintsLumberjack(
   state: LumberjackEngineState,
 ): BoardHints {
@@ -375,6 +380,14 @@ export function getBoardHintsLumberjack(
   }
   if (round.type === "bull") {
     return { highlight: ["bull" as DartSegment] };
+  }
+  if (round.type === "double") {
+    const segs = state.dtAbove15Only ? SEGMENTS_15_PLUS : ALL_SEGMENTS;
+    return { highlightDoubles: segs, highlightBullInner: true };
+  }
+  if (round.type === "triple") {
+    const segs = state.dtAbove15Only ? SEGMENTS_15_PLUS : ALL_SEGMENTS;
+    return { highlightTriples: segs };
   }
   return {};
 }

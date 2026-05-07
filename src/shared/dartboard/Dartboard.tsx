@@ -126,6 +126,15 @@ export function Dartboard({
     () => new Set<DartSegment>(boardHints?.dim ?? []),
     [boardHints],
   );
+  const highlightDoublesSet = useMemo(
+    () => new Set<DartSegment>(boardHints?.highlightDoubles ?? []),
+    [boardHints],
+  );
+  const highlightTriplesSet = useMemo(
+    () => new Set<DartSegment>(boardHints?.highlightTriples ?? []),
+    [boardHints],
+  );
+  const highlightBullInner = boardHints?.highlightBullInner ?? false;
 
   function svgPointFromEvent(evt: { clientX: number; clientY: number }): {
     cx: number;
@@ -176,17 +185,26 @@ export function Dartboard({
     fire({ segment: "miss", multiplier: 1, score: 0, cx, cy, label: "Miss" });
   }
 
-  function classForSegmentHint(num: number, baseClass: string | undefined): string {
+  function classForSegmentHint(
+    num: number,
+    ring: "single" | "double" | "triple",
+    baseClass: string | undefined,
+  ): string {
     const seg = num as DartSegment;
     const base = baseClass ?? "";
     if (highlightSet.has(seg)) return `${base} ${styles["hint-highlight"] ?? ""}`;
+    if (ring === "double" && highlightDoublesSet.has(seg))
+      return `${base} ${styles["hint-highlight"] ?? ""}`;
+    if (ring === "triple" && highlightTriplesSet.has(seg))
+      return `${base} ${styles["hint-highlight"] ?? ""}`;
     if (dimSet.has(seg)) return `${base} ${styles["hint-dim"] ?? ""}`;
     return base;
   }
 
-  function classForBullHint(baseClass: string | undefined): string {
+  function classForBullHint(baseClass: string | undefined, inner?: boolean): string {
     const base = baseClass ?? "";
     if (highlightSet.has("bull")) return `${base} ${styles["hint-highlight"] ?? ""}`;
+    if (inner && highlightBullInner) return `${base} ${styles["hint-highlight"] ?? ""}`;
     if (dimSet.has("bull")) return `${base} ${styles["hint-dim"] ?? ""}`;
     return base;
   }
@@ -236,7 +254,7 @@ export function Dartboard({
               <g key={r.number} pointerEvents="visiblePainted">
                 <path
                   d={single1}
-                  className={classForSegmentHint(r.number, wedgeClass)}
+                  className={classForSegmentHint(r.number, "single", wedgeClass)}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSegmentClick(e, r, 1);
@@ -246,7 +264,7 @@ export function Dartboard({
                 />
                 <path
                   d={single2}
-                  className={classForSegmentHint(r.number, wedgeClass)}
+                  className={classForSegmentHint(r.number, "single", wedgeClass)}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSegmentClick(e, r, 1);
@@ -256,7 +274,7 @@ export function Dartboard({
                 />
                 <path
                   d={dbl}
-                  className={classForSegmentHint(r.number, dblClass)}
+                  className={classForSegmentHint(r.number, "double", dblClass)}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSegmentClick(e, r, 2);
@@ -266,7 +284,7 @@ export function Dartboard({
                 />
                 <path
                   d={tpl}
-                  className={classForSegmentHint(r.number, tplClass)}
+                  className={classForSegmentHint(r.number, "triple", tplClass)}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSegmentClick(e, r, 3);
@@ -283,6 +301,22 @@ export function Dartboard({
             <path
               key={`hl-${r.number}`}
               d={arcPath(R_OUTER_BULL, R_OUTER, r.startDeg, r.endDeg)}
+              className={styles["hint-highlight-overlay"]}
+              pointerEvents="none"
+            />
+          ))}
+          {REGIONS.filter((r) => highlightDoublesSet.has(r.number as DartSegment)).map((r) => (
+            <path
+              key={`hl-d-${r.number}`}
+              d={arcPath(R_DOUBLE_INNER, R_OUTER, r.startDeg, r.endDeg)}
+              className={styles["hint-highlight-overlay"]}
+              pointerEvents="none"
+            />
+          ))}
+          {REGIONS.filter((r) => highlightTriplesSet.has(r.number as DartSegment)).map((r) => (
+            <path
+              key={`hl-t-${r.number}`}
+              d={arcPath(R_TRIPLE_INNER, R_TRIPLE_OUTER, r.startDeg, r.endDeg)}
               className={styles["hint-highlight-overlay"]}
               pointerEvents="none"
             />
@@ -305,7 +339,7 @@ export function Dartboard({
             cx={CENTER}
             cy={CENTER}
             r={R_INNER_BULL}
-            className={classForBullHint(styles["bull-inner"])}
+            className={classForBullHint(styles["bull-inner"], true)}
             onClick={(e) => {
               e.stopPropagation();
               handleBullClick(e, "inner");
@@ -318,6 +352,15 @@ export function Dartboard({
               cx={CENTER}
               cy={CENTER}
               r={R_OUTER_BULL}
+              className={styles["hint-highlight-overlay"]}
+              pointerEvents="none"
+            />
+          )}
+          {highlightBullInner && !highlightSet.has("bull") && (
+            <circle
+              cx={CENTER}
+              cy={CENTER}
+              r={R_INNER_BULL}
               className={styles["hint-highlight-overlay"]}
               pointerEvents="none"
             />

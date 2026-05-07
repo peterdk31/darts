@@ -162,15 +162,22 @@ describe("Lumberjack engine", () => {
       ).toEqual({ points: 0, hit: false });
     });
 
-    it("double round: dtAbove15Only blocks low doubles", () => {
+    it("double round: dtAbove15Only blocks doubles below 15", () => {
       const round = LUMBERJACK_ROUNDS[2]!;
+      expect(
+        computeRoundPoints(
+          { ...miss, segment: 14, multiplier: 2, score: 28 },
+          round,
+          true,
+        ),
+      ).toEqual({ points: 0, hit: false });
       expect(
         computeRoundPoints(
           { ...miss, segment: 15, multiplier: 2, score: 30 },
           round,
           true,
         ),
-      ).toEqual({ points: 0, hit: false });
+      ).toEqual({ points: 30, hit: true });
       expect(
         computeRoundPoints(
           { ...miss, segment: 16, multiplier: 2, score: 32 },
@@ -206,15 +213,22 @@ describe("Lumberjack engine", () => {
       ).toEqual({ points: 0, hit: false });
     });
 
-    it("triple round: dtAbove15Only blocks low triples", () => {
+    it("triple round: dtAbove15Only blocks triples below 15", () => {
       const round = LUMBERJACK_ROUNDS[4]!;
       expect(
         computeRoundPoints(
-          { ...miss, segment: 10, multiplier: 3, score: 30 },
+          { ...miss, segment: 14, multiplier: 3, score: 42 },
           round,
           true,
         ),
       ).toEqual({ points: 0, hit: false });
+      expect(
+        computeRoundPoints(
+          { ...miss, segment: 15, multiplier: 3, score: 45 },
+          round,
+          true,
+        ),
+      ).toEqual({ points: 45, hit: true });
       expect(
         computeRoundPoints(
           { ...miss, segment: 16, multiplier: 3, score: 48 },
@@ -784,15 +798,61 @@ describe("Lumberjack engine", () => {
       expect(getBoardHintsLumberjack(s)).toEqual({ highlight: ["bull"] });
     });
 
-    it("returns empty hints for double/triple/exact41 rounds", () => {
+    it("highlights all doubles + inner bull for the double round", () => {
       const teams = makeTeams();
       let s = initLumberjack(ctx(teams));
-      // Skip to round 3 (double)
+      // Skip to round 2 (double)
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       expect(s.currentRound).toBe(2);
+      const hints = getBoardHintsLumberjack(s);
+      expect(hints.highlightDoubles).toEqual([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]);
+      expect(hints.highlightBullInner).toBe(true);
+    });
+
+    it("highlights only 15+ doubles when dtAbove15Only is on", () => {
+      const teams = makeTeams();
+      let s = initLumberjack(ctx(teams, { dtAbove15Only: true }));
+      // Skip to round 2 (double)
+      s = throwN(s, [["miss"], ["miss"], ["miss"]]);
+      s = throwN(s, [["miss"], ["miss"], ["miss"]]);
+      s = throwN(s, [["miss"], ["miss"], ["miss"]]);
+      s = throwN(s, [["miss"], ["miss"], ["miss"]]);
+      expect(s.currentRound).toBe(2);
+      const hints = getBoardHintsLumberjack(s);
+      expect(hints.highlightDoubles).toEqual([15, 16, 17, 18, 19, 20]);
+      expect(hints.highlightBullInner).toBe(true);
+    });
+
+    it("highlights all triples for the triple round", () => {
+      const teams = makeTeams();
+      let s = initLumberjack(ctx(teams));
+      // Skip to round 4 (triple)
+      for (let i = 0; i < 8; i++) s = throwN(s, [["miss"], ["miss"], ["miss"]]);
+      expect(s.currentRound).toBe(4);
+      const hints = getBoardHintsLumberjack(s);
+      expect(hints.highlightTriples).toEqual([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]);
+      expect(hints.highlightBullInner).toBeUndefined();
+    });
+
+    it("highlights only 15+ triples when dtAbove15Only is on", () => {
+      const teams = makeTeams();
+      let s = initLumberjack(ctx(teams, { dtAbove15Only: true }));
+      // Skip to round 4 (triple)
+      for (let i = 0; i < 8; i++) s = throwN(s, [["miss"], ["miss"], ["miss"]]);
+      expect(s.currentRound).toBe(4);
+      const hints = getBoardHintsLumberjack(s);
+      expect(hints.highlightTriples).toEqual([15, 16, 17, 18, 19, 20]);
+    });
+
+    it("returns empty hints for exact41 round", () => {
+      const teams = makeTeams();
+      let s = initLumberjack(ctx(teams));
+      // Skip to round 6 (exact41)
+      for (let i = 0; i < 12; i++) s = throwN(s, [["miss"], ["miss"], ["miss"]]);
+      expect(s.currentRound).toBe(6);
       expect(getBoardHintsLumberjack(s)).toEqual({});
     });
   });
@@ -812,19 +872,19 @@ describe("Lumberjack engine", () => {
   });
 
   describe("dtAbove15Only setting integration", () => {
-    it("blocks D15 in double round when enabled", () => {
+    it("allows D15 but blocks D14 in double round when enabled", () => {
       const teams = makeTeams();
       let s = initLumberjack(ctx(teams, { dtAbove15Only: true }));
-      // Skip to round 3 (double)
+      // Skip to round 2 (double)
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       expect(s.currentRound).toBe(2);
 
-      // Team A tries D15 (blocked), D16 (allowed), miss
-      s = throwN(s, [[15, 2], [16, 2], ["miss"]]);
-      expect(s.scoreByTeam["A"]).toBe(32); // Only D16 counted
+      // Team A tries D14 (blocked), D15 (allowed), miss
+      s = throwN(s, [[14, 2], [15, 2], ["miss"]]);
+      expect(s.scoreByTeam["A"]).toBe(30); // Only D15 counted
     });
   });
 });
