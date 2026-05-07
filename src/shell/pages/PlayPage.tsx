@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Dartboard, type ActiveDot, type DartboardThrow } from "@/shared/dartboard/Dartboard";
+import { GridBoard } from "@/shared/dartboard/GridBoard";
 import { TurnIndicatorCard } from "@/shell/components/TurnIndicatorCard";
 import { BustBanner } from "@/shell/components/BustBanner";
 import { BoardSettingsMenu } from "@/shell/components/BoardSettingsMenu";
@@ -410,7 +411,9 @@ export function PlayPage() {
         </button>
         <BoardSettingsMenu
           boardTheme={prefs.boardTheme}
+          boardLayout={prefs.boardLayout}
           onChangeTheme={(theme) => setPrefs({ ...prefs, boardTheme: theme })}
+          onChangeLayout={(layout) => setPrefs({ ...prefs, boardLayout: layout })}
         />
       </div>
 
@@ -429,23 +432,39 @@ export function PlayPage() {
         </div>
 
         <div className={styles.boardSlot}>
-          <Dartboard
-            onThrow={handleThrow}
-            activeColor={`var(--team-color-${currentTeam.colorId})`}
-            turnDots={turnDots}
-            dotsFading={dotsFading}
-            boardHints={boardHints}
-            boardTheme={prefs.boardTheme}
-            disabled={bustBanner !== null || pendingIntent !== null}
-            overlay={
-              pendingIntent ? (
-                <IntentChooser
-                  candidates={pendingIntent.candidates}
-                  onChoose={handleIntentChosen}
-                />
-              ) : undefined
-            }
-          />
+          {prefs.boardLayout === "grid" ? (
+            <GridBoard
+              onThrow={handleThrow}
+              boardHints={boardHints}
+              disabled={bustBanner !== null || pendingIntent !== null}
+              overlay={
+                pendingIntent ? (
+                  <IntentChooser
+                    candidates={pendingIntent.candidates}
+                    onChoose={handleIntentChosen}
+                  />
+                ) : undefined
+              }
+            />
+          ) : (
+            <Dartboard
+              onThrow={handleThrow}
+              activeColor={`var(--team-color-${currentTeam.colorId})`}
+              turnDots={turnDots}
+              dotsFading={dotsFading}
+              boardHints={boardHints}
+              boardTheme={prefs.boardTheme}
+              disabled={bustBanner !== null || pendingIntent !== null}
+              overlay={
+                pendingIntent ? (
+                  <IntentChooser
+                    candidates={pendingIntent.candidates}
+                    onChoose={handleIntentChosen}
+                  />
+                ) : undefined
+              }
+            />
+          )}
           <Button
             variant="secondary"
             onClick={handleMiss}

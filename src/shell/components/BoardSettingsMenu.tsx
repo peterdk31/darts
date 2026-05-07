@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import type { BoardTheme } from "@/shared/prefs";
+import type { BoardLayout, BoardTheme } from "@/shared/prefs";
 import styles from "./BoardSettingsMenu.module.css";
 
 interface Props {
   boardTheme: BoardTheme;
+  boardLayout: BoardLayout;
   onChangeTheme: (theme: BoardTheme) => void;
+  onChangeLayout: (layout: BoardLayout) => void;
 }
 
-export function BoardSettingsMenu({ boardTheme, onChangeTheme }: Props) {
+export function BoardSettingsMenu({
+  boardTheme,
+  boardLayout,
+  onChangeTheme,
+  onChangeLayout,
+}: Props) {
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement | null>(null);
 
@@ -42,27 +49,53 @@ export function BoardSettingsMenu({ boardTheme, onChangeTheme }: Props) {
       </button>
       {open && (
         <div role="menu" className={styles.popover}>
-          <div className={styles.title}>Board theme</div>
+          <div className={styles.title}>Board layout</div>
           <label className={styles.row}>
             <input
               type="radio"
-              name="board-theme"
-              value="traditional"
-              checked={boardTheme === "traditional"}
-              onChange={() => onChangeTheme("traditional")}
+              name="board-layout"
+              value="classic"
+              checked={boardLayout === "classic"}
+              onChange={() => onChangeLayout("classic")}
             />
-            Traditional
+            Classic
           </label>
           <label className={styles.row}>
             <input
               type="radio"
-              name="board-theme"
-              value="desaturated"
-              checked={boardTheme === "desaturated"}
-              onChange={() => onChangeTheme("desaturated")}
+              name="board-layout"
+              value="grid"
+              checked={boardLayout === "grid"}
+              onChange={() => onChangeLayout("grid")}
             />
-            Desaturated
+            Grid
           </label>
+
+          {boardLayout === "classic" && (
+            <>
+              <div className={`${styles.title} ${styles.titleSeparated}`}>Board theme</div>
+              <label className={styles.row}>
+                <input
+                  type="radio"
+                  name="board-theme"
+                  value="traditional"
+                  checked={boardTheme === "traditional"}
+                  onChange={() => onChangeTheme("traditional")}
+                />
+                Traditional
+              </label>
+              <label className={styles.row}>
+                <input
+                  type="radio"
+                  name="board-theme"
+                  value="desaturated"
+                  checked={boardTheme === "desaturated"}
+                  onChange={() => onChangeTheme("desaturated")}
+                />
+                Desaturated
+              </label>
+            </>
+          )}
         </div>
       )}
     </div>
