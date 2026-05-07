@@ -41,23 +41,11 @@
   cursor: not-allowed;
 }
 
-.miss-label {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--board-miss-fg);
-  font-weight: 700;
-  font-size: clamp(10px, 2.6cqw, 14px);
-  letter-spacing: 0.18em;
-  pointer-events: none;
-}
-
 .svg {
-  width: 86%;
-  height: 86%;
+  width: 100%;
+  height: 100%;
   position: absolute;
-  inset: 7%;
+  inset: 0;
   display: block;
 }
 
@@ -117,21 +105,52 @@
   stroke: #000;
   stroke-width: 1;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
+  transition: opacity 600ms ease-out;
+}
+
+.dot-fading {
+  opacity: 0;
+}
+
+.flash-bg {
+  fill: rgba(0, 0, 0, 0.78);
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
 }
 
 .flash {
-  fill: var(--color-accent);
-  font-size: 24px;
-  font-weight: 700;
+  fill: #ffffff;
+  font-size: 22px;
+  font-weight: 800;
   font-family: var(--font-sans);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.02em;
 }
 
 .hint-highlight {
-  filter: brightness(1.25) drop-shadow(0 0 4px var(--color-accent));
+  filter: brightness(1.5) saturate(1.3)
+    drop-shadow(0 0 6px var(--color-accent));
+}
+
+.hint-highlight-overlay {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px var(--color-accent))
+    drop-shadow(0 0 2px var(--color-accent));
 }
 .hint-dim {
   opacity: 0.45;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 50%;
+  z-index: 10;
 }
 
 /* Desaturated theme overrides */

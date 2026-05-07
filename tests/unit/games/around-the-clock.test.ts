@@ -69,13 +69,19 @@ function throwAtCurrent(
 }
 
 describe("around-the-clock engine", () => {
-  it("progresses only when hitting the current target; multipliers count as one hit", () => {
+  it("progresses by multiplier when hitting current target; misses do nothing", () => {
     let s = initATC(ctx(makeTwoTeams()));
-    s = throwAtCurrent(s, 1, 1, 1);
+    s = throwAtCurrent(s, 1, 1, 1); // S1 → 1
     expect(s.progressByTeam["A"]).toBe(1);
-    s = throwAtCurrent(s, 2, 3, 6); // T2 still counts as one hit for ATC
-    expect(s.progressByTeam["A"]).toBe(2);
-    s = throwAtCurrent(s, 5, 1, 5); // wrong target
+    s = throwAtCurrent(s, 2, 3, 6); // T2 advances 3 steps → 4
+    expect(s.progressByTeam["A"]).toBe(4);
+    s = throwAtCurrent(s, 8, 1, 8); // wrong target (current is 5) → no change
+    expect(s.progressByTeam["A"]).toBe(4);
+  });
+
+  it("double advances 2 steps", () => {
+    let s = initATC(ctx(makeOneTeam()));
+    s = throwAtCurrent(s, 1, 2, 2); // D1 advances 2 → 2
     expect(s.progressByTeam["A"]).toBe(2);
   });
 
@@ -95,6 +101,36 @@ describe("around-the-clock engine", () => {
       timestamp: "t",
     });
     expect(r.effects.some((e) => e.kind === "gameWon")).toBe(true);
+    expect(r.state.status).toBe("won");
+  });
+
+  it("multiplier on a numeric target cannot skip the bull", () => {
+    let s = initATC(ctx(makeOneTeam()));
+    // Walk progress to 18 (target = 19) using singles 1..18.
+    for (let n = 1; n <= 18; n++) {
+      s = throwAtCurrent(s, n, 1, n);
+    }
+    expect(s.progressByTeam["A"]).toBe(18);
+    // T19 would naively advance by 3 (→ 21 = won), but must cap at 20.
+    s = throwAtCurrent(s, 19, 3, 57);
+    expect(s.progressByTeam["A"]).toBe(20);
+    expect(s.status).toBe("in-progress");
+
+    // T20 while already at 20 also must not win — bull is still required.
+    s = throwAtCurrent(s, 20, 3, 60);
+    expect(s.progressByTeam["A"]).toBe(20);
+    expect(s.status).toBe("in-progress");
+
+    // A bull hit now wins.
+    const { teamId, playerId } = activeIds(s);
+    const r = applyThrowATC(s, {
+      teamId,
+      playerId,
+      segment: "outer-bull",
+      multiplier: 1,
+      score: 25,
+      timestamp: "t",
+    });
     expect(r.state.status).toBe("won");
   });
 

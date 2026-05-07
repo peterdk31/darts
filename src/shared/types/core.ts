@@ -29,6 +29,8 @@ export interface ThrowRecord {
   multiplier: 1 | 2 | 3;
   score: number;
   timestamp: string;
+  /** Game-specific resolution hint set by the UI before applyThrow. Opaque to other games. */
+  intent?: string;
 }
 
 export type GameTypeId = string;

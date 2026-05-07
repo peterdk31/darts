@@ -66,9 +66,13 @@ export function applyThrowATC(
   let nextProgress = progress;
   let won = false;
   if (h && h.num === target) {
-    nextProgress = progress + 1;
-    if (nextProgress >= ATC_TARGETS_COUNT) {
+    if (target === "bull") {
+      // Bull stage: any bull hit wins.
+      nextProgress = ATC_TARGETS_COUNT;
       won = true;
+    } else {
+      // Numeric target: advance by multiplier, but cap at 20 so the bull cannot be skipped.
+      nextProgress = Math.min(20, progress + throw_.multiplier);
     }
   }
 
@@ -90,7 +94,7 @@ export function applyThrowATC(
   effects.push({
     kind: "scored",
     teamId,
-    delta: nextProgress !== progress ? 1 : 0,
+    delta: nextProgress - progress,
   });
 
   if (won) {

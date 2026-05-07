@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Team, ThrowRecord, GameTypeId } from "./core";
+import type { Team, ThrowRecord, ThrowSegment, GameTypeId } from "./core";
 
 export type SettingDefinition =
   | { key: string; label: string; type: "toggle"; default: boolean }
@@ -76,6 +76,12 @@ export interface BoardHints {
   dim?: ReadonlyArray<DartSegment>;
 }
 
+export interface ScoreboardHit {
+  segment: ThrowSegment;
+  multiplier: 1 | 2 | 3;
+  intent?: string;
+}
+
 export interface GameManifest<EngineState = unknown> {
   id: GameTypeId;
   displayName: string;
@@ -90,7 +96,12 @@ export interface GameManifest<EngineState = unknown> {
     state: EngineState;
     resolvedSettings: ResolvedSettings;
     teams: ReadonlyArray<Team>;
+    onScoreboardHit?: (hit: ScoreboardHit) => void;
   }) => ReactNode;
   getBoardHints?(state: EngineState): BoardHints;
+  getCandidatesForThrow?(
+    state: EngineState,
+    throw_: ThrowRecord,
+  ): ReadonlyArray<{ intent: string; label: string }>;
   migrate?(prior: { schemaVersion: number; state: unknown }): EngineState;
 }

@@ -4,6 +4,7 @@ import { TurnIndicatorCard } from "@/shell/components/TurnIndicatorCard";
 import { BustBanner } from "@/shell/components/BustBanner";
 import { BoardSettingsMenu } from "@/shell/components/BoardSettingsMenu";
 import { AbandonConfirmModal } from "@/shell/components/AbandonConfirmModal";
+import { IntentChooser } from "@/games/mickey-mouse/ui/IntentChooser";
 import { Button } from "@/shared/components/Button";
 import { useNavigate } from "@/shared/routing/router";
 import { useSession } from "@/shell/session/useSession";
@@ -13,9 +14,26 @@ import type {
   CompletedGameRecord,
   InProgressGame,
 } from "@/shell/session/types";
-import type { ThrowEffect } from "@/shared/types/game-module";
-import type { ThrowRecord } from "@/shared/types/core";
+import type { ScoreboardHit, ThrowEffect } from "@/shared/types/game-module";
+import type { ThrowRecord, ThrowSegment } from "@/shared/types/core";
 import styles from "./PlayPage.module.css";
+
+function deriveTurnDots(
+  throwDots: ReadonlyArray<ActiveDot | null>,
+  dartsThrownThisTurn: number,
+): ActiveDot[] {
+  if (dartsThrownThisTurn === 0) return [];
+  return throwDots
+    .slice(-dartsThrownThisTurn)
+    .filter((d): d is ActiveDot => d !== null);
+}
+
+function scoreForSegment(segment: ThrowSegment, multiplier: 1 | 2 | 3): number {
+  if (segment === "miss") return 0;
+  if (segment === "outer-bull") return 25;
+  if (segment === "inner-bull") return 50;
+  return (segment as number) * multiplier;
+}
 
 export function PlayPage() {
   const { state, dispatch, prefs, setPrefs, dartsAllotmentForCurrentPlayer } = useSession();
@@ -23,8 +41,48 @@ export function PlayPage() {
   const game = state.inProgressGame;
   const [bustBanner, setBustBanner] = useState<{ revertedScore: number } | null>(null);
   const [abandonOpen, setAbandonOpen] = useState(false);
+  const [pendingIntent, setPendingIntent] = useState<{
+    record: ThrowRecord;
+    candidates: ReadonlyArray<{ intent: string; label: string }>;
+  } | null>(null);
   const [turnDots, setTurnDots] = useState<ActiveDot[]>([]);
+  const [dotsFading, setDotsFading] = useState(false);
+  const fadeTimerRef = useRef<number | null>(null);
+  const prevDartsCountRef = useRef<number>(game?.currentTurn.dartsThrownThisTurn ?? 0);
+  // Parallel to game.throws / game.redoStack, holds the tap coords for each
+  // throw so undo/redo can restore the active turn's dots. In-memory only —
+  // throws restored from persistence start as nulls (no remembered position).
+  const throwDotsRef = useRef<Array<ActiveDot | null>>([]);
+  const redoDotsRef = useRef<Array<ActiveDot | null>>([]);
+  const dotsGameIdRef = useRef<string | null>(null);
   const winRecorded = useRef<string | null>(null);
+
+  if (game && dotsGameIdRef.current !== game.id) {
+    dotsGameIdRef.current = game.id;
+    throwDotsRef.current = Array(game.throws.length).fill(null);
+    redoDotsRef.current = Array(game.redoStack.length).fill(null);
+  }
+
+  useEffect(() => {
+    const cur = game?.currentTurn.dartsThrownThisTurn ?? 0;
+    const prev = prevDartsCountRef.current;
+    prevDartsCountRef.current = cur;
+    // Turn flipped: dart count just reset from > 0 back to 0. Fade out the
+    // previous turn's dots so the next team starts with a clean board.
+    if (prev > 0 && cur === 0) {
+      setDotsFading(true);
+      if (fadeTimerRef.current !== null) window.clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = window.setTimeout(() => {
+        setTurnDots([]);
+        setDotsFading(false);
+        fadeTimerRef.current = null;
+      }, 600);
+    }
+  }, [game?.currentTurn.dartsThrownThisTurn]);
+
+  useEffect(() => () => {
+    if (fadeTimerRef.current !== null) window.clearTimeout(fadeTimerRef.current);
+  }, []);
 
   const manifest = useMemo(
     () => (game ? getById(game.gameTypeId) : null),
@@ -87,25 +145,19 @@ export function PlayPage() {
   const boardHints = manifest.getBoardHints?.(game.engineState);
   const ViewPanel = manifest.view;
 
-  function handleThrow(t: DartboardThrow) {
+  function handleMiss() {
+    handleThrow({
+      segment: "miss",
+      multiplier: 1,
+      score: 0,
+      cx: 0,
+      cy: 0,
+      label: "Miss",
+    });
+  }
+
+  function proceedWithThrow(throwRecord: ThrowRecord) {
     if (!game || !manifest) return;
-    if (bustBanner) return; // ignore taps while banner showing
-
-    const newDot: ActiveDot = { cx: t.cx, cy: t.cy, segmentLabel: t.label };
-    if (game.currentTurn.dartsThrownThisTurn === 0) {
-      setTurnDots([newDot]);
-    } else {
-      setTurnDots((prev) => [...prev, newDot]);
-    }
-
-    const throwRecord: ThrowRecord = {
-      teamId: game.currentTurn.teamId,
-      playerId: game.currentTurn.playerId,
-      segment: t.segment,
-      multiplier: t.multiplier,
-      score: t.score,
-      timestamp: new Date().toISOString(),
-    };
 
     const r = applyOne(manifest, game.engineState, game.currentTurn, throwRecord);
     const won = r.effects.some((e) => e.kind === "gameWon");
@@ -119,7 +171,6 @@ export function PlayPage() {
     });
 
     if (bust) {
-      // Compute reverted team score from the new state's selectScoreboard if available.
       const sb = manifest.selectScoreboard(r.state);
       const teamRow = sb.rows.find((row) => row.teamId === bust.teamId);
       const score = teamRow ? Number.parseInt(teamRow.primary, 10) : NaN;
@@ -147,6 +198,95 @@ export function PlayPage() {
     }
   }
 
+  function handleThrow(t: DartboardThrow) {
+    if (!game || !manifest) return;
+    if (bustBanner || pendingIntent) return;
+
+    if (fadeTimerRef.current !== null) {
+      window.clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = null;
+    }
+    setDotsFading(false);
+
+    const newEntry: ActiveDot | null =
+      t.segment === "miss" ? null : { cx: t.cx, cy: t.cy, segmentLabel: t.label };
+    throwDotsRef.current = [...throwDotsRef.current, newEntry];
+    redoDotsRef.current = [];
+
+    if (t.segment !== "miss") {
+      const newDot = newEntry as ActiveDot;
+      if (game.currentTurn.dartsThrownThisTurn === 0) {
+        setTurnDots([newDot]);
+      } else {
+        setTurnDots((prev) => [...prev, newDot]);
+      }
+    } else if (game.currentTurn.dartsThrownThisTurn === 0) {
+      setTurnDots([]);
+    }
+
+    const throwRecord: ThrowRecord = {
+      teamId: game.currentTurn.teamId,
+      playerId: game.currentTurn.playerId,
+      segment: t.segment,
+      multiplier: t.multiplier,
+      score: t.score,
+      timestamp: new Date().toISOString(),
+    };
+
+    const candidates = manifest.getCandidatesForThrow?.(game.engineState, throwRecord) ?? [];
+    if (candidates.length === 2) {
+      setPendingIntent({ record: throwRecord, candidates });
+      return;
+    }
+
+    proceedWithThrow(throwRecord);
+  }
+
+  function handleIntentChosen(intent: string) {
+    if (!pendingIntent) return;
+    const record = { ...pendingIntent.record, intent };
+    setPendingIntent(null);
+    proceedWithThrow(record);
+  }
+
+  function handleScoreboardHit(hit: ScoreboardHit) {
+    if (!game || !manifest) return;
+    if (bustBanner || pendingIntent) return;
+
+    if (fadeTimerRef.current !== null) {
+      window.clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = null;
+    }
+    setDotsFading(false);
+
+    throwDotsRef.current = [...throwDotsRef.current, null];
+    redoDotsRef.current = [];
+    if (game.currentTurn.dartsThrownThisTurn === 0) {
+      setTurnDots([]);
+    }
+
+    const score = scoreForSegment(hit.segment, hit.multiplier);
+    const throwRecord: ThrowRecord = {
+      teamId: game.currentTurn.teamId,
+      playerId: game.currentTurn.playerId,
+      segment: hit.segment,
+      multiplier: hit.multiplier,
+      score,
+      timestamp: new Date().toISOString(),
+      ...(hit.intent ? { intent: hit.intent } : {}),
+    };
+
+    if (!hit.intent) {
+      const candidates = manifest.getCandidatesForThrow?.(game.engineState, throwRecord) ?? [];
+      if (candidates.length === 2) {
+        setPendingIntent({ record: throwRecord, candidates });
+        return;
+      }
+    }
+
+    proceedWithThrow(throwRecord);
+  }
+
   function handleUndo() {
     if (!game || !manifest) return;
     if (game.throws.length === 0) return;
@@ -166,7 +306,19 @@ export function PlayPage() {
       game.playerRotation,
       newThrows,
     );
-    setTurnDots([]);
+    if (fadeTimerRef.current !== null) {
+      window.clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = null;
+    }
+    setDotsFading(false);
+    const poppedDot =
+      throwDotsRef.current[throwDotsRef.current.length - 1] ?? null;
+    throwDotsRef.current = throwDotsRef.current.slice(0, -1);
+    redoDotsRef.current = [...redoDotsRef.current, poppedDot];
+    setTurnDots(deriveTurnDots(throwDotsRef.current, replay.currentTurn.dartsThrownThisTurn));
+    // Pre-empt the turn-flip fade effect: this transition is from undo,
+    // not a natural turn end, so the previous count baseline tracks the new state.
+    prevDartsCountRef.current = replay.currentTurn.dartsThrownThisTurn;
     dispatch({
       type: "popThrow",
       engineState: replay.engineState,
@@ -193,7 +345,17 @@ export function PlayPage() {
       game.playerRotation,
       newThrows,
     );
-    setTurnDots([]);
+    if (fadeTimerRef.current !== null) {
+      window.clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = null;
+    }
+    setDotsFading(false);
+    const restoredDot =
+      redoDotsRef.current[redoDotsRef.current.length - 1] ?? null;
+    redoDotsRef.current = redoDotsRef.current.slice(0, -1);
+    throwDotsRef.current = [...throwDotsRef.current, restoredDot];
+    setTurnDots(deriveTurnDots(throwDotsRef.current, replay.currentTurn.dartsThrownThisTurn));
+    prevDartsCountRef.current = replay.currentTurn.dartsThrownThisTurn;
     dispatch({
       type: "popRedo",
       engineState: replay.engineState,
@@ -217,23 +379,27 @@ export function PlayPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.headerBar}>
-        <Button variant="ghost" size="sm" onClick={() => setAbandonOpen(true)}>
-          End
-        </Button>
+      <div className={styles.topRow}>
+        <TurnIndicatorCard
+          team={currentTeam}
+          teamNumber={teamNumber}
+          player={currentPlayer}
+          dartsThrownThisTurn={game.currentTurn.dartsThrownThisTurn}
+          dartsAllotmentForPlayer={allotment}
+        />
+        <button
+          type="button"
+          className={styles.iconBtn}
+          aria-label="End game"
+          onClick={() => setAbandonOpen(true)}
+        >
+          ×
+        </button>
         <BoardSettingsMenu
           boardTheme={prefs.boardTheme}
           onChangeTheme={(theme) => setPrefs({ ...prefs, boardTheme: theme })}
         />
-      </header>
-
-      <TurnIndicatorCard
-        team={currentTeam}
-        teamNumber={teamNumber}
-        player={currentPlayer}
-        dartsThrownThisTurn={game.currentTurn.dartsThrownThisTurn}
-        dartsAllotmentForPlayer={allotment}
-      />
+      </div>
 
       <div className={styles.layout}>
         <div className={styles.scoreboardSlot}>
@@ -242,6 +408,7 @@ export function PlayPage() {
               state: game.engineState,
               resolvedSettings: game.resolvedSettings,
               teams: game.teams,
+              onScoreboardHit: bustBanner || pendingIntent ? undefined : handleScoreboardHit,
             }) as ReactElement | null)
           ) : (
             <DefaultScoreboard rows={scoreboard.rows} game={game} />
@@ -253,23 +420,42 @@ export function PlayPage() {
             onThrow={handleThrow}
             activeColor={`var(--team-color-${currentTeam.colorId})`}
             turnDots={turnDots}
+            dotsFading={dotsFading}
             boardHints={boardHints}
             boardTheme={prefs.boardTheme}
-            disabled={bustBanner !== null}
+            disabled={bustBanner !== null || pendingIntent !== null}
+            overlay={
+              pendingIntent ? (
+                <IntentChooser
+                  candidates={pendingIntent.candidates}
+                  onChoose={handleIntentChosen}
+                />
+              ) : undefined
+            }
           />
+          <Button
+            variant="secondary"
+            onClick={handleMiss}
+            disabled={bustBanner !== null || pendingIntent !== null}
+            className={styles.missBtn}
+          >
+            Miss
+          </Button>
           <div className={styles.controls}>
             <Button
-              variant="secondary"
+              variant="ghost"
+              size="sm"
               onClick={handleUndo}
-              disabled={game.throws.length === 0 || bustBanner !== null}
+              disabled={game.throws.length === 0 || bustBanner !== null || pendingIntent !== null}
             >
               ← Undo last
             </Button>
             {game.redoStack.length > 0 ? (
               <Button
-                variant="secondary"
+                variant="ghost"
+                size="sm"
                 onClick={handleRedo}
-                disabled={bustBanner !== null}
+                disabled={bustBanner !== null || pendingIntent !== null}
               >
                 Redo →
               </Button>

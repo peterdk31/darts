@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import type { BoardHints, DartSegment } from "@/shared/types/game-module";
 import type { ThrowSegment } from "@/shared/types/core";
 import type { BoardTheme } from "@/shared/prefs";
@@ -27,10 +27,14 @@ interface Props {
   activeColor?: string;
   /** Persistent dots for the current turn (cleared by parent on turn advance). */
   turnDots?: ReadonlyArray<ActiveDot>;
+  /** When true, the rendered dots animate to opacity 0 (turn just ended). */
+  dotsFading?: boolean;
   boardHints?: BoardHints;
   boardTheme?: BoardTheme;
   /** When true, taps are ignored (e.g. while bust banner is active or game won). */
   disabled?: boolean;
+  /** Content rendered as a centered modal overlay on top of the board. */
+  overlay?: ReactNode;
 }
 
 /** Standard dartboard segment number sequence starting from the top (20) clockwise. */
@@ -40,6 +44,7 @@ const SEGMENT_ORDER: number[] = [
 
 const VIEW = 400;
 const CENTER = VIEW / 2;
+const PADDING = 18; // viewBox padding to fit number labels outside the doubles ring
 const R_OUTER = 190; // outer edge of doubles
 const R_DOUBLE_INNER = 175;
 const R_TRIPLE_OUTER = 120;
@@ -98,16 +103,18 @@ export function Dartboard({
   onThrow,
   activeColor,
   turnDots = [],
+  dotsFading = false,
   boardHints,
   boardTheme = "traditional",
   disabled = false,
+  overlay,
 }: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [flash, setFlash] = useState<{ key: number; label: string } | null>(null);
 
   useEffect(() => {
     if (!flash) return;
-    const t = setTimeout(() => setFlash(null), 180);
+    const t = setTimeout(() => setFlash(null), 1000);
     return () => clearTimeout(t);
   }, [flash]);
 
@@ -203,7 +210,7 @@ export function Dartboard({
       >
         <svg
           ref={svgRef}
-          viewBox={`0 0 ${VIEW} ${VIEW}`}
+          viewBox={`${-PADDING} ${-PADDING} ${VIEW + 2 * PADDING} ${VIEW + 2 * PADDING}`}
           className={styles.svg}
           aria-label="Dartboard"
           role="img"
@@ -271,6 +278,16 @@ export function Dartboard({
             );
           })}
 
+          {/* Highlight outlines drawn on top so neighbor strokes don't clip them. */}
+          {REGIONS.filter((r) => highlightSet.has(r.number as DartSegment)).map((r) => (
+            <path
+              key={`hl-${r.number}`}
+              d={arcPath(R_OUTER_BULL, R_OUTER, r.startDeg, r.endDeg)}
+              className={styles["hint-highlight-overlay"]}
+              pointerEvents="none"
+            />
+          ))}
+
           {/* Bull rings */}
           <circle
             cx={CENTER}
@@ -296,6 +313,15 @@ export function Dartboard({
             role="button"
             aria-label="Inner bull, 50"
           />
+          {highlightSet.has("bull") && (
+            <circle
+              cx={CENTER}
+              cy={CENTER}
+              r={R_OUTER_BULL}
+              className={styles["hint-highlight-overlay"]}
+              pointerEvents="none"
+            />
+          )}
 
           {/* Number labels — outside the doubles ring */}
           {REGIONS.map((r) => {
@@ -322,29 +348,37 @@ export function Dartboard({
               cx={d.cx}
               cy={d.cy}
               r={5}
-              className={styles.dot}
+              className={`${styles.dot} ${dotsFading ? styles["dot-fading"] ?? "" : ""}`}
               pointerEvents="none"
             />
           ))}
 
           {/* Flash overlay on tap (text feedback for now). */}
           {flash && (
-            <text
-              key={flash.key}
-              x={CENTER}
-              y={CENTER + 20}
-              textAnchor="middle"
-              className={styles.flash}
-              pointerEvents="none"
-            >
-              {flash.label}
-            </text>
+            <g key={flash.key} pointerEvents="none" className={styles["flash-group"]}>
+              <rect
+                x={CENTER - 90}
+                y={CENTER - 18}
+                width={180}
+                height={36}
+                rx={18}
+                ry={18}
+                className={styles["flash-bg"]}
+              />
+              <text
+                x={CENTER}
+                y={CENTER}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className={styles.flash}
+              >
+                {flash.label}
+              </text>
+            </g>
           )}
         </svg>
-        <span className={styles["miss-label"]} aria-hidden="true">
-          MISS
-        </span>
       </button>
+      {overlay && <div className={styles.overlay}>{overlay}</div>}
     </div>
   );
 }
