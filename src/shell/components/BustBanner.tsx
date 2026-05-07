@@ -3,13 +3,13 @@ import styles from "./BustBanner.module.css";
 
 interface Props {
   open: boolean;
-  /** The team's score immediately after the bust (i.e., reverted to start-of-turn). */
-  revertedScore?: number;
+  label?: string;
+  detail?: string;
   durationMs?: number;
   onDismiss: () => void;
 }
 
-export function BustBanner({ open, revertedScore, durationMs = 2500, onDismiss }: Props) {
+export function BustBanner({ open, label = "BUST", detail, durationMs = 2500, onDismiss }: Props) {
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(onDismiss, durationMs);
@@ -20,10 +20,8 @@ export function BustBanner({ open, revertedScore, durationMs = 2500, onDismiss }
 
   return (
     <div className={styles.banner} role="alert" aria-live="assertive">
-      <span className={styles.label}>BUST</span>
-      {typeof revertedScore === "number" && (
-        <span className={styles.detail}>score reverts to {revertedScore}</span>
-      )}
+      <span className={styles.label}>{label}</span>
+      {detail && <span className={styles.detail}>{detail}</span>}
     </div>
   );
 }

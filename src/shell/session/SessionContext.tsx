@@ -48,14 +48,45 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+const ACTIVE_SESSION_KEY = "darts:activeSessionId";
+
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [sessions, setSessions] = useState<SessionDescriptor[]>(() => loadSessionList());
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [state, dispatch] = useReducer(sessionReducer, initialSessionState);
-  const [hydrated, setHydrated] = useState(false);
+  const [initialData] = useState(() => {
+    const sessions = loadSessionList();
+    let restore: { id: string; state: SessionState } | null = null;
+    try {
+      const id = localStorage.getItem(ACTIVE_SESSION_KEY);
+      if (id && sessions.some((s) => s.id === id)) {
+        restore = { id, state: loadSessionById(id) };
+      } else if (id) {
+        localStorage.removeItem(ACTIVE_SESSION_KEY);
+      }
+    } catch { /* ignore */ }
+    return { sessions, restore };
+  });
+
+  const [sessions, setSessions] = useState(initialData.sessions);
+  const [activeSessionId, setActiveSessionIdRaw] = useState<string | null>(
+    initialData.restore?.id ?? null,
+  );
+  const [state, dispatch] = useReducer(
+    sessionReducer,
+    initialData.restore?.state ?? initialSessionState,
+  );
+  const [hydrated, setHydrated] = useState(initialData.restore !== null);
   const [prefs, setPrefsState] = useState<UserPrefs>(() => loadPrefs());
   const [quotaError, setQuotaError] = useState<{ namespace: StorageNamespace } | null>(null);
-  const prevState = useRef<SessionState | null>(null);
+  const prevState = useRef<SessionState | null>(
+    initialData.restore?.state ?? null,
+  );
+
+  const setActiveSessionId = useCallback((id: string | null) => {
+    setActiveSessionIdRaw(id);
+    try {
+      if (id) localStorage.setItem(ACTIVE_SESSION_KEY, id);
+      else localStorage.removeItem(ACTIVE_SESSION_KEY);
+    } catch { /* ignore */ }
+  }, []);
 
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeSessionId) ?? null,
@@ -72,7 +103,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setActiveSessionId(id);
     setHydrated(true);
     prevState.current = null;
-  }, []);
+  }, [setActiveSessionId]);
 
   const createSession = useCallback((name: string): string => {
     const id = crypto.randomUUID();
@@ -95,7 +126,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
     prevState.current = null;
     return id;
-  }, [sessions]);
+  }, [sessions, setActiveSessionId]);
 
   const deleteSession = useCallback((id: string) => {
     deleteSessionData(id);
@@ -110,14 +141,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setHydrated(false);
       prevState.current = null;
     }
-  }, [sessions, activeSessionId]);
+  }, [sessions, activeSessionId, setActiveSessionId]);
 
   const leaveSession = useCallback(() => {
     setActiveSessionId(null);
     dispatch({ type: "hydrate", state: initialSessionState });
     setHydrated(false);
     prevState.current = null;
-  }, []);
+  }, [setActiveSessionId]);
 
   // Persist session state changes.
   useEffect(() => {

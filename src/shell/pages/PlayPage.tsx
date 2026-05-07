@@ -41,7 +41,7 @@ export function PlayPage() {
   const { state, dispatch, prefs, setPrefs, dartsAllotmentForCurrentPlayer } = useSession();
   const navigate = useNavigate();
   const game = state.inProgressGame;
-  const [bustBanner, setBustBanner] = useState<{ revertedScore: number } | null>(null);
+  const [bustBanner, setBustBanner] = useState<{ label?: string; detail?: string } | null>(null);
   const [abandonOpen, setAbandonOpen] = useState(false);
   const [pendingIntent, setPendingIntent] = useState<{
     record: ThrowRecord;
@@ -174,10 +174,16 @@ export function PlayPage() {
     });
 
     if (bust) {
-      const sb = manifest.selectScoreboard(r.state);
-      const teamRow = sb.rows.find((row) => row.teamId === bust.teamId);
-      const score = teamRow ? Number.parseInt(teamRow.primary, 10) : NaN;
-      setBustBanner({ revertedScore: Number.isFinite(score) ? score : 0 });
+      if (bust.label || bust.detail) {
+        setBustBanner({ label: bust.label, detail: bust.detail });
+      } else {
+        const sb = manifest.selectScoreboard(r.state);
+        const teamRow = sb.rows.find((row) => row.teamId === bust.teamId);
+        const score = teamRow ? Number.parseInt(teamRow.primary, 10) : NaN;
+        setBustBanner({
+          detail: Number.isFinite(score) ? `score reverts to ${score}` : undefined,
+        });
+      }
     }
 
     if (won) {
@@ -474,7 +480,8 @@ export function PlayPage() {
 
       <BustBanner
         open={bustBanner !== null}
-        revertedScore={bustBanner?.revertedScore}
+        label={bustBanner?.label}
+        detail={bustBanner?.detail}
         onDismiss={() => setBustBanner(null)}
       />
 

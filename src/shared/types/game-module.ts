@@ -22,7 +22,7 @@ export type ResolvedSettings = Readonly<Record<string, boolean | number | string
 
 export type ThrowEffect =
   | { kind: "scored"; teamId: string; delta: number }
-  | { kind: "bust"; teamId: string }
+  | { kind: "bust"; teamId: string; label?: string; detail?: string }
   | { kind: "turnAdvance"; nextTeamId: string; nextPlayerId: string }
   | { kind: "gameWon"; winnerTeamIds: string[]; summary?: unknown };
 

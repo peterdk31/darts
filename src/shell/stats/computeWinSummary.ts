@@ -4,6 +4,7 @@ import type { CricketEngineState } from "@/games/cricket/engine";
 import { CRICKET_TARGETS } from "@/games/cricket/engine";
 import type { MickeyEngineState } from "@/games/mickey-mouse/engine";
 import type { ATCEngineState } from "@/games/around-the-clock/engine";
+import type { LumberjackEngineState } from "@/games/lumberjack/engine";
 
 export interface TeamRanking {
   teamId: string;
@@ -66,6 +67,9 @@ export function computeWinSummary(
       break;
     case "around-the-clock":
       rankings = rankATC(teams, winnerTeamIds, engineState as ATCEngineState);
+      break;
+    case "lumberjack":
+      rankings = rankLumberjack(teams, winnerTeamIds, engineState as LumberjackEngineState);
       break;
     default:
       rankings = defaultRank(teams, winnerTeamIds);
@@ -186,6 +190,29 @@ function rankATC(
     if (i > 0) rank = i + 1;
     const label = e.progress >= 21 ? "Completed" : `Reached ${e.progress}/21`;
     return { teamId: e.teamId, rank, label };
+  });
+}
+
+function rankLumberjack(
+  teams: ReadonlyArray<Team>,
+  winnerTeamIds: string[],
+  state: LumberjackEngineState,
+): TeamRanking[] {
+  const entries = teams.map((t) => ({
+    teamId: t.id,
+    score: state.scoreByTeam[t.id] ?? 0,
+    isWinner: winnerTeamIds.includes(t.id),
+  }));
+
+  entries.sort((a, b) => {
+    if (a.isWinner !== b.isWinner) return a.isWinner ? -1 : 1;
+    return b.score - a.score;
+  });
+
+  let rank = 1;
+  return entries.map((e, i) => {
+    if (i > 0 && entries[i - 1]!.score !== e.score) rank = i + 1;
+    return { teamId: e.teamId, rank, label: `${e.score} pts` };
   });
 }
 
