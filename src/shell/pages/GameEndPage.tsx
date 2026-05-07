@@ -4,7 +4,9 @@ import { useNavigate } from "@/shared/routing/router";
 import { useSession } from "@/shell/session/useSession";
 import { SessionTally } from "@/shell/components/SessionTally";
 import { getById } from "@/games/registry";
+import type { Team } from "@/shared/types/core";
 import { isWinSummary, type WinSummary } from "@/shell/stats/computeWinSummary";
+import { getTeamLabel } from "@/shared/teams/teamLabel";
 import styles from "./GameEndPage.module.css";
 
 function ordinal(n: number): string {
@@ -28,7 +30,7 @@ export function GameEndPage() {
     return (
       <div className={styles.page}>
         <p>No completed game to display.</p>
-        <Button variant="primary" onClick={() => navigate("/teams")}>
+        <Button variant="primary" onClick={() => navigate("/games")}>
           Back to start
         </Button>
       </div>
@@ -45,13 +47,13 @@ export function GameEndPage() {
     if (state.teams.length < 2) {
       dispatch({ type: "setTeams", teams: lastRecord!.teams });
     }
-    navigate("/game-select");
+    navigate("/games");
   }
 
   function newGameFreshTeams() {
     dispatch({ type: "discardInProgressGame" });
     dispatch({ type: "setTeams", teams: [] });
-    navigate("/teams");
+    navigate("/games");
   }
 
   return (
@@ -105,7 +107,7 @@ function RichResults({
   winnerTeamIds,
 }: {
   summary: WinSummary;
-  teams: ReadonlyArray<{ id: string; displayName: string; colorId: string; players: ReadonlyArray<{ id: string; displayName: string }> }>;
+  teams: ReadonlyArray<Team>;
   winnerTeamIds: string[];
 }) {
   return (
@@ -140,7 +142,7 @@ function RichResults({
               >
                 {ordinal(ranking.rank)}
               </span>
-              <span className={styles.teamName}>{team.displayName}</span>
+              <span className={styles.teamName}>{getTeamLabel(team)}</span>
               {isWinner && (
                 <span className={styles.crown} aria-label="Winner">
                   &#9733;
@@ -180,7 +182,7 @@ function FallbackWinners({
   teams,
   winnerTeamIds,
 }: {
-  teams: ReadonlyArray<{ id: string; displayName: string; colorId: string }>;
+  teams: ReadonlyArray<Team>;
   winnerTeamIds: string[];
 }) {
   const winners = teams.filter((t) => winnerTeamIds.includes(t.id));
@@ -202,7 +204,7 @@ function FallbackWinners({
               color: `var(--team-color-${t.colorId}-on)`,
             }}
           >
-            {t.displayName}
+            {getTeamLabel(t)}
           </span>
           <span className={styles.crown} aria-hidden="true">
             &#9733;

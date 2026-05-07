@@ -42,7 +42,7 @@ export function GameSettingsPage() {
     return (
       <div className={styles.page}>
         <p>Unknown game type: {id}</p>
-        <Button variant="primary" onClick={() => navigate("/game-select")}>
+        <Button variant="primary" onClick={() => navigate("/games")}>
           Back to game select
         </Button>
       </div>
@@ -57,7 +57,7 @@ export function GameSettingsPage() {
     if (!manifest) return;
     const teams = state.teams;
     if (teams.length < 2) {
-      navigate("/teams");
+      navigate(`/teams/${encodeURIComponent(id)}`);
       return;
     }
     if (state.inProgressGame) {
@@ -117,8 +117,11 @@ export function GameSettingsPage() {
 
   return (
     <div className={styles.page}>
-      <header>
+      <header className={styles.header}>
         <h1>{manifest.displayName} settings</h1>
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/teams/${encodeURIComponent(id)}`)}>
+          ← Back
+        </Button>
       </header>
 
       <ul className={styles.list}>
@@ -177,9 +180,6 @@ export function GameSettingsPage() {
       </ul>
 
       <div className={styles.actions}>
-        <Button variant="ghost" onClick={() => navigate("/game-select")}>
-          ← Back
-        </Button>
         <Button variant="primary" onClick={startGame}>
           Start
         </Button>

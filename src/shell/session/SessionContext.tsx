@@ -11,7 +11,6 @@ import {
 } from "react";
 import {
   storage,
-  StorageCorruptError,
   StorageQuotaError,
   StorageUnsupportedError,
   type StorageNamespace,
@@ -23,140 +22,123 @@ import {
   sessionReducer,
   type SessionAction,
 } from "./sessionReducer";
+import type { SessionState } from "./types";
+import type { SessionDescriptor } from "./sessionDescriptor";
 import {
-  HISTORY_RECORD_SCHEMA_VERSION,
-  IN_PROGRESS_SCHEMA_VERSION,
-  SESSION_SCHEMA_VERSION,
-  type CompletedGameRecord,
-  type InProgressGame,
-  type SessionState,
-} from "./types";
-import type { Team } from "@/shared/types/core";
-
-interface PersistedSessionShellState {
-  teams: Team[];
-}
+  loadSessionById,
+  loadSessionList,
+  saveSessionList,
+  saveSessionState,
+  deleteSessionData,
+} from "./sessionsStorage";
 
 interface SessionContextValue {
+  activeSession: SessionDescriptor | null;
+  sessions: SessionDescriptor[];
+  openSession: (id: string) => void;
+  createSession: (name: string) => string;
+  deleteSession: (id: string) => void;
+  leaveSession: () => void;
   state: SessionState;
   dispatch: (a: SessionAction) => void;
   prefs: UserPrefs;
   setPrefs: (next: UserPrefs) => void;
-  /** Surfaces a typed quota error to the modal. */
   reportStorageError: (err: unknown) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-function loadSessionState(): SessionState {
-  let teams: Team[] = [];
-  let inProgressGame: InProgressGame | null = null;
-  let history: CompletedGameRecord[] = [];
-
-  try {
-    const sess = storage.read<PersistedSessionShellState>("session");
-    if (sess?.data?.teams && Array.isArray(sess.data.teams)) {
-      teams = sess.data.teams;
-    }
-  } catch (err) {
-    if (!(err instanceof StorageCorruptError)) throw err;
-  }
-
-  try {
-    const ip = storage.read<InProgressGame>("inProgressGame");
-    if (ip?.data) inProgressGame = ip.data;
-  } catch (err) {
-    if (err instanceof StorageCorruptError) {
-      // Discard corrupt in-progress game silently — user starts fresh.
-      try {
-        storage.remove("inProgressGame");
-      } catch {
-        // ignore
-      }
-    } else {
-      throw err;
-    }
-  }
-
-  try {
-    const list = storage.readList<CompletedGameRecord>("history");
-    history = list.map((rec) => rec.data);
-  } catch (err) {
-    if (!(err instanceof StorageCorruptError)) throw err;
-    // Treat corrupt history as empty but DO NOT overwrite (preserve recovery).
-  }
-
-  return { teams, inProgressGame, history };
-}
-
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const [sessions, setSessions] = useState<SessionDescriptor[]>(() => loadSessionList());
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [state, dispatch] = useReducer(sessionReducer, initialSessionState);
   const [hydrated, setHydrated] = useState(false);
   const [prefs, setPrefsState] = useState<UserPrefs>(() => loadPrefs());
   const [quotaError, setQuotaError] = useState<{ namespace: StorageNamespace } | null>(null);
   const prevState = useRef<SessionState | null>(null);
 
-  // Hydrate once on mount.
-  useEffect(() => {
+  const activeSession = useMemo(
+    () => sessions.find((s) => s.id === activeSessionId) ?? null,
+    [sessions, activeSessionId],
+  );
+
+  const openSession = useCallback((id: string) => {
     try {
-      const loaded = loadSessionState();
+      const loaded = loadSessionById(id);
       dispatch({ type: "hydrate", state: loaded });
     } catch (err) {
-      if (err instanceof StorageUnsupportedError) {
-        // Persistence unavailable; proceed with in-memory only.
-      } else {
-        throw err;
-      }
-    } finally {
-      setHydrated(true);
+      if (!(err instanceof StorageUnsupportedError)) throw err;
     }
+    setActiveSessionId(id);
+    setHydrated(true);
+    prevState.current = null;
   }, []);
 
-  // Persist whenever state changes (post-hydration).
+  const createSession = useCallback((name: string): string => {
+    const id = crypto.randomUUID();
+    const descriptor: SessionDescriptor = {
+      id,
+      name,
+      createdAt: new Date().toISOString(),
+    };
+    const next = [descriptor, ...sessions];
+    setSessions(next);
+    try {
+      saveSessionList(next);
+    } catch (err) {
+      if (err instanceof StorageQuotaError) {
+        setQuotaError({ namespace: err.namespace });
+      }
+    }
+    dispatch({ type: "hydrate", state: initialSessionState });
+    setActiveSessionId(id);
+    setHydrated(true);
+    prevState.current = null;
+    return id;
+  }, [sessions]);
+
+  const deleteSession = useCallback((id: string) => {
+    deleteSessionData(id);
+    const next = sessions.filter((s) => s.id !== id);
+    setSessions(next);
+    try {
+      saveSessionList(next);
+    } catch { /* ignore */ }
+    if (activeSessionId === id) {
+      setActiveSessionId(null);
+      dispatch({ type: "hydrate", state: initialSessionState });
+      setHydrated(false);
+      prevState.current = null;
+    }
+  }, [sessions, activeSessionId]);
+
+  const leaveSession = useCallback(() => {
+    setActiveSessionId(null);
+    dispatch({ type: "hydrate", state: initialSessionState });
+    setHydrated(false);
+    prevState.current = null;
+  }, []);
+
+  // Persist session state changes.
   useEffect(() => {
-    if (!hydrated) {
+    if (!hydrated || !activeSessionId) {
       prevState.current = state;
       return;
     }
     const prev = prevState.current;
     prevState.current = state;
     try {
-      // session
-      if (!prev || prev.teams !== state.teams) {
-        storage.write<PersistedSessionShellState>("session", {
-          schemaVersion: SESSION_SCHEMA_VERSION,
-          data: { teams: state.teams },
-        });
-      }
-      // inProgressGame
-      if (!prev || prev.inProgressGame !== state.inProgressGame) {
-        if (state.inProgressGame) {
-          storage.write<InProgressGame>("inProgressGame", {
-            schemaVersion: IN_PROGRESS_SCHEMA_VERSION,
-            data: state.inProgressGame,
-          });
-        } else if (prev?.inProgressGame) {
-          storage.remove("inProgressGame");
-        }
-      }
-      // history
-      if (!prev || prev.history !== state.history) {
-        const wrapped = state.history.map((data) => ({
-          schemaVersion: HISTORY_RECORD_SCHEMA_VERSION,
-          data,
-        }));
-        storage.replaceList<CompletedGameRecord>("history", wrapped);
-      }
+      saveSessionState(activeSessionId, state, prev);
     } catch (err) {
       if (err instanceof StorageQuotaError) {
         setQuotaError({ namespace: err.namespace });
       } else if (err instanceof StorageUnsupportedError) {
-        // ignore — degrades to in-memory only
+        // ignore
       } else {
         throw err;
       }
     }
-  }, [state, hydrated]);
+  }, [state, hydrated, activeSessionId]);
 
   const setPrefs = useCallback((next: UserPrefs) => {
     setPrefsState(next);
@@ -166,7 +148,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (err instanceof StorageQuotaError) {
         setQuotaError({ namespace: err.namespace });
       }
-      // unsupported: ignore
     }
   }, []);
 
@@ -181,22 +162,33 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleClearHistory = useCallback(() => {
-    try {
-      storage.replaceList("history", []);
-    } catch {
-      // ignore — best effort
+    if (activeSessionId) {
+      try {
+        storage.replaceList(`sess:${activeSessionId}:history` as StorageNamespace, []);
+      } catch { /* ignore */ }
     }
-    // Update in-memory state to match.
     dispatch({
       type: "hydrate",
       state: { ...state, history: [] },
     });
     setQuotaError(null);
-  }, [state]);
+  }, [state, activeSessionId]);
 
   const value = useMemo<SessionContextValue>(
-    () => ({ state, dispatch, prefs, setPrefs, reportStorageError }),
-    [state, prefs, setPrefs, reportStorageError],
+    () => ({
+      activeSession,
+      sessions,
+      openSession,
+      createSession,
+      deleteSession,
+      leaveSession,
+      state,
+      dispatch,
+      prefs,
+      setPrefs,
+      reportStorageError,
+    }),
+    [activeSession, sessions, openSession, createSession, deleteSession, leaveSession, state, prefs, setPrefs, reportStorageError],
   );
 
   return (

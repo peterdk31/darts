@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import type { Player, Team, TeamColorId } from "@/shared/types/core";
-import { TEAM_COLORS, assignNextColor } from "@/shared/teams/colors";
+import type { Player, Team } from "@/shared/types/core";
+import { assignNextColor, COLOR_LABELS } from "@/shared/teams/colors";
 import { Button } from "@/shared/components/Button";
-import { useNavigate } from "@/shared/routing/router";
+import { useNavigate, useParams } from "@/shared/routing/router";
 import { useSession } from "@/shell/session/useSession";
+import { playerStore } from "@/shell/players/playerStore";
 import styles from "./TeamSetupPage.module.css";
 
 const MIN_TEAMS = 2;
 const MAX_TEAMS = 8;
-const MIN_PLAYERS = 1;
 const MAX_PLAYERS = 4;
 
 let _idCounter = 0;
@@ -17,32 +17,35 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${_idCounter}`;
 }
 
-function makeTeam(existing: ReadonlyArray<Team>, displayName?: string): Team {
+function makeTeam(existing: ReadonlyArray<Team>): Team {
+  const colorId = assignNextColor(existing);
   return {
     id: uid("team"),
-    displayName: displayName ?? `Team ${existing.length + 1}`,
-    colorId: assignNextColor(existing),
-    players: [
-      { id: uid("player"), displayName: "Player 1" },
-    ],
+    displayName: `${COLOR_LABELS[colorId]} Team`,
+    colorId,
+    players: [],
   };
 }
 
-function makePlayer(team: Team): Player {
-  return {
-    id: uid("player"),
-    displayName: `Player ${team.players.length + 1}`,
-  };
+function pruneDeletedPlayers(teams: Team[], activeIds: Set<string>): Team[] {
+  return teams.map((t) => ({
+    ...t,
+    players: t.players.filter((p) => activeIds.has(p.id)),
+  }));
 }
 
 export function TeamSetupPage() {
+  const { gameId: rawGameId } = useParams<{ gameId: string }>();
+  const gameId = decodeURIComponent(rawGameId ?? "");
   const { state, dispatch } = useSession();
   const navigate = useNavigate();
   const [teams, setLocalTeams] = useState<Team[]>(() =>
     state.teams.length > 0 ? state.teams : [],
   );
+  const [quickAddTeamId, setQuickAddTeamId] = useState<string | null>(null);
+  const [quickAddName, setQuickAddName] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  // If we hydrate session.teams after first render, copy in.
   useEffect(() => {
     if (teams.length === 0 && state.teams.length > 0) {
       setLocalTeams(state.teams);
@@ -50,33 +53,51 @@ export function TeamSetupPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.teams]);
 
+  const rosterPlayers = playerStore.getActive();
+  const activeIds = new Set(rosterPlayers.map((p) => p.id));
+
+  useEffect(() => {
+    const pruned = pruneDeletedPlayers(teams, activeIds);
+    if (pruned.some((t, i) => t.players.length !== teams[i]!.players.length)) {
+      setLocalTeams(pruned);
+      dispatch({ type: "setTeams", teams: pruned });
+    }
+  }); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const visibleTeams = pruneDeletedPlayers(teams, activeIds);
+  const assignedPlayerIds = new Set(visibleTeams.flatMap((t) => t.players.map((p) => p.id)));
+  const availablePlayers = rosterPlayers.filter((p) => !assignedPlayerIds.has(p.id));
+
   function commit(next: Team[]) {
     setLocalTeams(next);
     dispatch({ type: "setTeams", teams: next });
   }
 
   function addTeam() {
-    if (teams.length >= MAX_TEAMS) return;
-    commit([...teams, makeTeam(teams)]);
+    if (visibleTeams.length >= MAX_TEAMS) return;
+    commit([...visibleTeams, makeTeam(visibleTeams)]);
   }
 
   function removeTeam(id: string) {
-    commit(teams.filter((t) => t.id !== id));
+    commit(visibleTeams.filter((t) => t.id !== id));
   }
 
-  function renameTeam(id: string, displayName: string) {
-    commit(teams.map((t) => (t.id === id ? { ...t, displayName } : t)));
+  function moveTeam(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= visibleTeams.length) return;
+    const next = [...visibleTeams];
+    [next[index], next[target]] = [next[target]!, next[index]!];
+    commit(next);
   }
 
-  function setTeamColor(id: string, colorId: TeamColorId) {
-    commit(teams.map((t) => (t.id === id ? { ...t, colorId } : t)));
-  }
-
-  function addPlayer(teamId: string) {
+  function assignPlayer(teamId: string, playerId: string) {
+    const rp = rosterPlayers.find((p) => p.id === playerId);
+    if (!rp) return;
+    const player: Player = { id: rp.id, displayName: rp.displayName };
     commit(
-      teams.map((t) =>
+      visibleTeams.map((t) =>
         t.id === teamId && t.players.length < MAX_PLAYERS
-          ? { ...t, players: [...t.players, makePlayer(t)] }
+          ? { ...t, players: [...t.players, player] }
           : t,
       ),
     );
@@ -84,7 +105,7 @@ export function TeamSetupPage() {
 
   function removePlayer(teamId: string, playerId: string) {
     commit(
-      teams.map((t) =>
+      visibleTeams.map((t) =>
         t.id === teamId
           ? { ...t, players: t.players.filter((p) => p.id !== playerId) }
           : t,
@@ -92,46 +113,49 @@ export function TeamSetupPage() {
     );
   }
 
-  function renamePlayer(teamId: string, playerId: string, displayName: string) {
-    commit(
-      teams.map((t) =>
-        t.id === teamId
-          ? {
-              ...t,
-              players: t.players.map((p) =>
-                p.id === playerId ? { ...p, displayName } : p,
-              ),
-            }
-          : t,
-      ),
-    );
+  function startQuickAdd(teamId: string) {
+    setQuickAddTeamId(teamId);
+    setQuickAddName("");
   }
 
-  function movePlayer(teamId: string, playerId: string, direction: -1 | 1) {
-    commit(
-      teams.map((t) => {
-        if (t.id !== teamId) return t;
-        const idx = t.players.findIndex((p) => p.id === playerId);
-        const target = idx + direction;
-        if (idx < 0 || target < 0 || target >= t.players.length) return t;
-        const players = [...t.players];
-        const a = players[idx]!;
-        const b = players[target]!;
-        players[idx] = b;
-        players[target] = a;
-        return { ...t, players };
-      }),
-    );
+  function commitQuickAdd() {
+    if (!quickAddTeamId) return;
+    const trimmed = quickAddName.trim();
+    if (!trimmed) {
+      setQuickAddTeamId(null);
+      return;
+    }
+    try {
+      const rp = playerStore.add(trimmed);
+      const player: Player = { id: rp.id, displayName: rp.displayName };
+      commit(
+        visibleTeams.map((t) =>
+          t.id === quickAddTeamId && t.players.length < MAX_PLAYERS
+            ? { ...t, players: [...t.players, player] }
+            : t,
+        ),
+      );
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add player");
+    }
+    setQuickAddTeamId(null);
+    setQuickAddName("");
   }
 
-  const validTeams = teams.filter(
-    (t) => t.players.length >= MIN_PLAYERS && t.displayName.trim().length > 0,
+  function handleQuickAddKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") commitQuickAdd();
+    if (e.key === "Escape") setQuickAddTeamId(null);
+  }
+
+  const validTeams = visibleTeams.filter(
+    (t) => t.players.length >= 1,
   );
-  const canContinue = validTeams.length >= MIN_TEAMS && validTeams.length === teams.length;
+  const canContinue = validTeams.length >= MIN_TEAMS && validTeams.length === visibleTeams.length;
 
   function onContinue() {
     if (!canContinue) return;
-    navigate("/game-select");
+    navigate(`/game-settings/${encodeURIComponent(gameId)}`);
   }
 
   return (
@@ -139,18 +163,43 @@ export function TeamSetupPage() {
       <header className={styles.header}>
         <div className={styles.headerRow}>
           <h1>Team setup</h1>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/history")}>
-            View history
-          </Button>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/players")}>
+              Players
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/games")}>
+              ← Back
+            </Button>
+          </div>
         </div>
-        <p className={styles.help}>
-          Add 2-8 teams, with 1-4 players per team. Colors are assigned
-          automatically; tap a swatch to change.
-        </p>
+        {rosterPlayers.length === 0 ? (
+          <p className={styles.help}>
+            No players in the roster yet.{" "}
+            <button
+              type="button"
+              className={styles.linkButton}
+              onClick={() => navigate("/players")}
+            >
+              Add players first
+            </button>{" "}
+            or use quick-add below to create players as you build teams.
+          </p>
+        ) : (
+          <p className={styles.help}>
+            Add 2-8 teams, with 1-4 players per team. Select players from
+            your roster or quick-add new ones.
+          </p>
+        )}
       </header>
 
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
+
       <ul className={styles.teamList}>
-        {teams.map((team, teamIdx) => (
+        {visibleTeams.map((team, teamIdx) => (
           <li key={team.id} className={styles.teamCard}>
             <div className={styles.teamHead}>
               <span
@@ -160,95 +209,105 @@ export function TeamSetupPage() {
                   color: `var(--team-color-${team.colorId}-on)`,
                 }}
               >
-                Team {teamIdx + 1}
+                {COLOR_LABELS[team.colorId]} Team
               </span>
-              <input
-                aria-label={`Team ${teamIdx + 1} display name`}
-                className={styles.teamName}
-                type="text"
-                maxLength={40}
-                value={team.displayName}
-                onChange={(e) => renameTeam(team.id, e.target.value)}
-              />
+              <span className={styles.headSpacer} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => moveTeam(teamIdx, -1)}
+                disabled={teamIdx === 0}
+                aria-label="Move up"
+              >
+                ↑
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => moveTeam(teamIdx, 1)}
+                disabled={teamIdx === visibleTeams.length - 1}
+                aria-label="Move down"
+              >
+                ↓
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => removeTeam(team.id)}
-                aria-label={`Remove ${team.displayName}`}
+                aria-label={`Remove ${COLOR_LABELS[team.colorId]} team`}
               >
                 Remove
               </Button>
             </div>
 
-            <div className={styles.swatches} role="group" aria-label="Team color">
-              {TEAM_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={
-                    c === team.colorId
-                      ? styles.swatchActive
-                      : styles.swatch
-                  }
-                  style={{ background: `var(--team-color-${c})` }}
-                  aria-label={`Color ${c}`}
-                  aria-pressed={c === team.colorId}
-                  onClick={() => setTeamColor(team.id, c)}
-                />
-              ))}
-            </div>
+            {team.players.length > 0 ? (
+              <ul className={styles.playerList}>
+                {team.players.map((p, pIdx) => (
+                  <li key={p.id} className={styles.playerRow}>
+                    <span className={styles.playerNum}>{pIdx + 1}.</span>
+                    <span className={styles.assignedPlayerName}>
+                      {p.displayName}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePlayer(team.id, p.id)}
+                      aria-label={`Remove ${p.displayName} from team`}
+                    >
+                      ×
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.emptyRoster}>No players assigned yet.</p>
+            )}
 
-            <ul className={styles.playerList}>
-              {team.players.map((p, pIdx) => (
-                <li key={p.id} className={styles.playerRow}>
-                  <span className={styles.playerNum}>{pIdx + 1}.</span>
-                  <input
-                    aria-label={`Player ${pIdx + 1} display name`}
-                    className={styles.playerName}
-                    type="text"
-                    maxLength={30}
-                    value={p.displayName}
-                    onChange={(e) => renamePlayer(team.id, p.id, e.target.value)}
-                  />
+            {team.players.length < MAX_PLAYERS && (
+              <div className={styles.assignSection}>
+                {availablePlayers.length > 0 && (
+                  <select
+                    className={styles.playerSelect}
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) assignPlayer(team.id, e.target.value);
+                    }}
+                    aria-label={`Add player to team ${teamIdx + 1}`}
+                  >
+                    <option value="">Select a player...</option>
+                    {availablePlayers.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.displayName}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {quickAddTeamId === team.id ? (
+                  <div className={styles.quickAddForm}>
+                    <input
+                      className={styles.quickAddInput}
+                      type="text"
+                      placeholder="New player name"
+                      maxLength={30}
+                      value={quickAddName}
+                      onChange={(e) => setQuickAddName(e.target.value)}
+                      onKeyDown={handleQuickAddKeyDown}
+                      onBlur={commitQuickAdd}
+                      autoFocus
+                      aria-label="Quick add player name"
+                    />
+                  </div>
+                ) : (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => movePlayer(team.id, p.id, -1)}
-                    disabled={pIdx === 0}
-                    aria-label="Move up"
+                    onClick={() => startQuickAdd(team.id)}
                   >
-                    ↑
+                    + Quick add player
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => movePlayer(team.id, p.id, 1)}
-                    disabled={pIdx === team.players.length - 1}
-                    aria-label="Move down"
-                  >
-                    ↓
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removePlayer(team.id, p.id)}
-                    disabled={team.players.length <= 1}
-                    aria-label="Remove player"
-                  >
-                    ×
-                  </Button>
-                </li>
-              ))}
-            </ul>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => addPlayer(team.id)}
-              disabled={team.players.length >= MAX_PLAYERS}
-            >
-              + Add player
-            </Button>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -257,19 +316,18 @@ export function TeamSetupPage() {
         <Button
           variant="secondary"
           onClick={addTeam}
-          disabled={teams.length >= MAX_TEAMS}
+          disabled={visibleTeams.length >= MAX_TEAMS}
         >
           + Add team
         </Button>
         <Button variant="primary" onClick={onContinue} disabled={!canContinue}>
-          Continue →
+          Start →
         </Button>
       </div>
 
-      {!canContinue && (
+      {!canContinue && visibleTeams.length > 0 && (
         <p className={styles.error} role="status">
-          Need at least {MIN_TEAMS} teams; each team needs a name and at least
-          one player.
+          Need at least {MIN_TEAMS} teams, each with at least one player.
         </p>
       )}
     </div>

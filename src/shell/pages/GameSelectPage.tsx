@@ -1,31 +1,40 @@
 import { listAll } from "@/games/registry";
 import { Button } from "@/shared/components/Button";
 import { useNavigate } from "@/shared/routing/router";
-import { useSession } from "@/shell/session/useSession";
+import { useSessionContext } from "@/shell/session/SessionContext";
 import styles from "./GameSelectPage.module.css";
 
 export function GameSelectPage() {
-  const { state } = useSession();
   const navigate = useNavigate();
-
-  const validTeams = state.teams.filter((t) => t.players.length >= 1);
-  if (validTeams.length < 2) {
-    return (
-      <div className={styles.page}>
-        <p>You need at least 2 teams before picking a game.</p>
-        <Button variant="primary" onClick={() => navigate("/teams")}>
-          Back to team setup
-        </Button>
-      </div>
-    );
-  }
-
+  const { activeSession, leaveSession } = useSessionContext();
   const games = listAll();
 
   return (
     <div className={styles.page}>
-      <header>
-        <h1>Pick a game</h1>
+      <header className={styles.headerRow}>
+        <div>
+          <h1>{activeSession?.name ?? "Pick a game"}</h1>
+          {activeSession && (
+            <p className={styles.sessionDate}>
+              {new Date(activeSession.createdAt).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/players")}>
+            Players
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/history")}>
+            History
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => { leaveSession(); navigate("/"); }}>
+            ← Back
+          </Button>
+        </div>
       </header>
       <ul className={styles.list}>
         {games.map((g) => (
@@ -34,7 +43,7 @@ export function GameSelectPage() {
               type="button"
               className={styles.tile}
               onClick={() =>
-                navigate(`/game-settings/${encodeURIComponent(g.id)}`)
+                navigate(`/teams/${encodeURIComponent(g.id)}`)
               }
             >
               <span className={styles.title}>{g.displayName}</span>
@@ -48,14 +57,6 @@ export function GameSelectPage() {
           </li>
         ))}
       </ul>
-      <div className={styles.footer}>
-        <Button variant="ghost" onClick={() => navigate("/teams")}>
-          ← Back to teams
-        </Button>
-        <Button variant="ghost" onClick={() => navigate("/history")}>
-          View history
-        </Button>
-      </div>
     </div>
   );
 }

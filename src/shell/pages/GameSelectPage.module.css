@@ -4,6 +4,23 @@
   gap: var(--space-5);
 }
 
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.headerRow h1 {
+  margin: 0;
+}
+
+.sessionDate {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-fg-muted);
+}
+
 .list {
   display: grid;
   gap: var(--space-3);
