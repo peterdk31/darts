@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import type { BoardHints, DartSegment } from "@/shared/types/game-module";
 import type { ThrowSegment } from "@/shared/types/core";
 import type { BoardTheme } from "@/shared/prefs";
@@ -9,9 +9,13 @@ export interface DartboardThrow {
   segment: ThrowSegment;
   multiplier: 1 | 2 | 3;
   score: number;
+  /** Tap location in SVG viewBox coords (0..400 for both axes). */
+  cx: number;
+  cy: number;
+  label: string;
 }
 
-interface ActiveDot {
+export interface ActiveDot {
   cx: number;
   cy: number;
   segmentLabel: string;
@@ -42,7 +46,7 @@ const R_TRIPLE_OUTER = 120;
 const R_TRIPLE_INNER = 105;
 const R_OUTER_BULL = 18;
 const R_INNER_BULL = 8;
-const R_NUMBER = 192; // baseline for the number labels
+const R_NUMBER = 207; // baseline for the number labels (clear of doubles ring)
 
 const SEGMENT_DEG = 18;
 const ROTATION = -90 - SEGMENT_DEG / 2; // start at top, segment 20 centered up
@@ -116,38 +120,53 @@ export function Dartboard({
     [boardHints],
   );
 
-  function fire(t: DartboardThrow, label: string) {
+  function svgPointFromEvent(evt: { clientX: number; clientY: number }): {
+    cx: number;
+    cy: number;
+  } {
+    const svg = svgRef.current;
+    if (!svg) return { cx: CENTER, cy: CENTER };
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX;
+    pt.y = evt.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { cx: CENTER, cy: CENTER };
+    const p = pt.matrixTransform(ctm.inverse());
+    return { cx: p.x, cy: p.y };
+  }
+
+  function fire(t: DartboardThrow) {
     if (disabled) return;
-    setFlash({ key: makeFlashKey(), label });
+    setFlash({ key: makeFlashKey(), label: t.label });
     onThrow(t);
   }
 
   function handleSegmentClick(
+    e: ReactMouseEvent<SVGPathElement>,
     region: SegmentRegion,
     multiplier: 1 | 2 | 3,
   ) {
     const score = region.number * multiplier;
     const label = `${multiplier === 3 ? "Triple " : multiplier === 2 ? "Double " : ""}${region.number}`;
-    fire(
-      {
-        segment: region.number,
-        multiplier,
-        score,
-      },
-      label,
-    );
+    const { cx, cy } = svgPointFromEvent(e);
+    fire({ segment: region.number, multiplier, score, cx, cy, label });
   }
 
-  function handleBullClick(kind: "outer" | "inner") {
+  function handleBullClick(
+    e: ReactMouseEvent<SVGCircleElement>,
+    kind: "outer" | "inner",
+  ) {
+    const { cx, cy } = svgPointFromEvent(e);
     if (kind === "outer") {
-      fire({ segment: "outer-bull", multiplier: 1, score: 25 }, "Outer Bull");
+      fire({ segment: "outer-bull", multiplier: 1, score: 25, cx, cy, label: "Outer Bull" });
     } else {
-      fire({ segment: "inner-bull", multiplier: 1, score: 50 }, "Inner Bull");
+      fire({ segment: "inner-bull", multiplier: 1, score: 50, cx, cy, label: "Inner Bull" });
     }
   }
 
-  function handleMissClick() {
-    fire({ segment: "miss", multiplier: 1, score: 0 }, "Miss");
+  function handleMissClick(e: ReactMouseEvent<HTMLButtonElement>) {
+    const { cx, cy } = svgPointFromEvent(e);
+    fire({ segment: "miss", multiplier: 1, score: 0, cx, cy, label: "Miss" });
   }
 
   function classForSegmentHint(num: number, baseClass: string | undefined): string {
@@ -213,7 +232,7 @@ export function Dartboard({
                   className={classForSegmentHint(r.number, wedgeClass)}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSegmentClick(r, 1);
+                    handleSegmentClick(e, r, 1);
                   }}
                   role="button"
                   aria-label={`Single ${r.number}`}
@@ -223,7 +242,7 @@ export function Dartboard({
                   className={classForSegmentHint(r.number, wedgeClass)}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSegmentClick(r, 1);
+                    handleSegmentClick(e, r, 1);
                   }}
                   role="button"
                   aria-label={`Single ${r.number}`}
@@ -233,7 +252,7 @@ export function Dartboard({
                   className={classForSegmentHint(r.number, dblClass)}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSegmentClick(r, 2);
+                    handleSegmentClick(e, r, 2);
                   }}
                   role="button"
                   aria-label={`Double ${r.number}`}
@@ -243,7 +262,7 @@ export function Dartboard({
                   className={classForSegmentHint(r.number, tplClass)}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSegmentClick(r, 3);
+                    handleSegmentClick(e, r, 3);
                   }}
                   role="button"
                   aria-label={`Triple ${r.number}`}
@@ -260,7 +279,7 @@ export function Dartboard({
             className={classForBullHint(styles["bull-outer"])}
             onClick={(e) => {
               e.stopPropagation();
-              handleBullClick("outer");
+              handleBullClick(e, "outer");
             }}
             role="button"
             aria-label="Outer bull, 25"
@@ -272,7 +291,7 @@ export function Dartboard({
             className={classForBullHint(styles["bull-inner"])}
             onClick={(e) => {
               e.stopPropagation();
-              handleBullClick("inner");
+              handleBullClick(e, "inner");
             }}
             role="button"
             aria-label="Inner bull, 50"

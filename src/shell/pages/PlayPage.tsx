@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Dartboard, type DartboardThrow } from "@/shared/dartboard/Dartboard";
+import { Dartboard, type ActiveDot, type DartboardThrow } from "@/shared/dartboard/Dartboard";
 import { TurnIndicatorCard } from "@/shell/components/TurnIndicatorCard";
 import { BustBanner } from "@/shell/components/BustBanner";
 import { BoardSettingsMenu } from "@/shell/components/BoardSettingsMenu";
@@ -23,6 +23,7 @@ export function PlayPage() {
   const game = state.inProgressGame;
   const [bustBanner, setBustBanner] = useState<{ revertedScore: number } | null>(null);
   const [abandonOpen, setAbandonOpen] = useState(false);
+  const [turnDots, setTurnDots] = useState<ActiveDot[]>([]);
   const winRecorded = useRef<string | null>(null);
 
   const manifest = useMemo(
@@ -86,12 +87,16 @@ export function PlayPage() {
   const boardHints = manifest.getBoardHints?.(game.engineState);
   const ViewPanel = manifest.view;
 
-  // Compute turn dots from this player's in-stretch throws.
-  const turnDots = computeTurnDots(game);
-
   function handleThrow(t: DartboardThrow) {
     if (!game || !manifest) return;
     if (bustBanner) return; // ignore taps while banner showing
+
+    const newDot: ActiveDot = { cx: t.cx, cy: t.cy, segmentLabel: t.label };
+    if (game.currentTurn.dartsThrownThisTurn === 0) {
+      setTurnDots([newDot]);
+    } else {
+      setTurnDots((prev) => [...prev, newDot]);
+    }
 
     const throwRecord: ThrowRecord = {
       teamId: game.currentTurn.teamId,
@@ -161,6 +166,7 @@ export function PlayPage() {
       game.playerRotation,
       newThrows,
     );
+    setTurnDots([]);
     dispatch({
       type: "popThrow",
       engineState: replay.engineState,
@@ -187,6 +193,7 @@ export function PlayPage() {
       game.playerRotation,
       newThrows,
     );
+    setTurnDots([]);
     dispatch({
       type: "popRedo",
       engineState: replay.engineState,
@@ -212,24 +219,36 @@ export function PlayPage() {
     <div className={styles.page}>
       <header className={styles.headerBar}>
         <Button variant="ghost" size="sm" onClick={() => setAbandonOpen(true)}>
-          End game
+          End
         </Button>
-        <span className={styles.gameLabel}>{manifest.displayName}</span>
         <BoardSettingsMenu
           boardTheme={prefs.boardTheme}
           onChangeTheme={(theme) => setPrefs({ ...prefs, boardTheme: theme })}
         />
       </header>
 
+      <TurnIndicatorCard
+        team={currentTeam}
+        teamNumber={teamNumber}
+        player={currentPlayer}
+        dartsThrownThisTurn={game.currentTurn.dartsThrownThisTurn}
+        dartsAllotmentForPlayer={allotment}
+      />
+
       <div className={styles.layout}>
-        <div className={styles.left}>
-          <TurnIndicatorCard
-            team={currentTeam}
-            teamNumber={teamNumber}
-            player={currentPlayer}
-            dartsThrownThisTurn={game.currentTurn.dartsThrownThisTurn}
-            dartsAllotmentForPlayer={allotment}
-          />
+        <div className={styles.scoreboardSlot}>
+          {ViewPanel ? (
+            (ViewPanel({
+              state: game.engineState,
+              resolvedSettings: game.resolvedSettings,
+              teams: game.teams,
+            }) as ReactElement | null)
+          ) : (
+            <DefaultScoreboard rows={scoreboard.rows} game={game} />
+          )}
+        </div>
+
+        <div className={styles.boardSlot}>
           <Dartboard
             onThrow={handleThrow}
             activeColor={`var(--team-color-${currentTeam.colorId})`}
@@ -258,17 +277,6 @@ export function PlayPage() {
           </div>
         </div>
 
-        <div className={styles.right}>
-          {ViewPanel ? (
-            (ViewPanel({
-              state: game.engineState,
-              resolvedSettings: game.resolvedSettings,
-              teams: game.teams,
-            }) as ReactElement | null)
-          ) : (
-            <DefaultScoreboard rows={scoreboard.rows} game={game} />
-          )}
-        </div>
       </div>
 
       <BustBanner
@@ -317,15 +325,3 @@ function DefaultScoreboard({
   );
 }
 
-interface TurnDotMarker {
-  cx: number;
-  cy: number;
-  segmentLabel: string;
-}
-
-function computeTurnDots(_game: InProgressGame): TurnDotMarker[] {
-  // Persistent dot markers project tap coordinates onto the board; defer the
-  // projection to a later iteration. Per-tap flash already provides immediate
-  // visual feedback during play.
-  return [];
-}

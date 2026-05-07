@@ -29,36 +29,29 @@ export function TurnIndicatorCard({
         style={{ background: `var(--team-color-${team.colorId})` }}
         aria-hidden="true"
       />
-      <div className={styles.content}>
-        <div className={styles.teamRow}>
+      <span
+        className={styles.badge}
+        style={{
+          background: `var(--team-color-${team.colorId})`,
+          color: `var(--team-color-${team.colorId}-on)`,
+        }}
+        aria-label={`Team ${teamNumber}: ${team.displayName}`}
+      >
+        T{teamNumber}
+      </span>
+      <span className={styles.player}>{player.displayName}</span>
+      <span
+        className={styles.pips}
+        aria-label={`${dartsThrownThisTurn} of ${dartsAllotmentForPlayer} darts thrown, ${remaining} left`}
+      >
+        {pips.map((p, i) => (
           <span
-            className={styles.badge}
-            style={{
-              background: `var(--team-color-${team.colorId})`,
-              color: `var(--team-color-${team.colorId}-on)`,
-            }}
-          >
-            Team {teamNumber}
-          </span>
-          <span className={styles.teamName}>{team.displayName}</span>
-        </div>
-        <div className={styles.player}>{player.displayName}</div>
-        <div
-          className={styles.pips}
-          aria-label={`${dartsThrownThisTurn} of ${dartsAllotmentForPlayer} darts thrown this turn`}
-        >
-          {pips.map((p, i) => (
-            <span
-              key={i}
-              className={p === "filled" ? styles.pipFilled : styles.pipEmpty}
-              aria-hidden="true"
-            />
-          ))}
-          <span className={styles.remaining}>
-            {remaining} dart{remaining === 1 ? "" : "s"} left
-          </span>
-        </div>
-      </div>
+            key={i}
+            className={p === "filled" ? styles.pipFilled : styles.pipEmpty}
+            aria-hidden="true"
+          />
+        ))}
+      </span>
     </div>
   );
 }
