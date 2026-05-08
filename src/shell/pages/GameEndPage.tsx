@@ -50,11 +50,7 @@ export function GameEndPage() {
     navigate("/games");
   }
 
-  function newGameFreshTeams() {
-    dispatch({ type: "discardInProgressGame" });
-    dispatch({ type: "setTeams", teams: [] });
-    navigate("/games");
-  }
+
 
   return (
     <div className={styles.page}>
@@ -88,10 +84,7 @@ export function GameEndPage() {
 
       <div className={styles.actions}>
         <Button variant="primary" onClick={newGameKeepingTeams}>
-          New game (keep teams)
-        </Button>
-        <Button variant="secondary" onClick={newGameFreshTeams}>
-          New game (new teams)
+          New game
         </Button>
         <Button variant="ghost" onClick={() => navigate("/history")}>
           View history

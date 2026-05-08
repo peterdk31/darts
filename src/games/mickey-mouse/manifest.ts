@@ -1,7 +1,11 @@
 import type { GameManifest, SettingDefinition } from "@/shared/types/game-module";
+import { shanghaiSetting } from "@/shared/shanghai";
 import {
   applyThrowMickey,
+  getBoardHintsMickey,
   getCandidatesForThrow,
+  getQuickInputsMickey,
+  getTurnHintMickey,
   initMickey,
   selectScoreboardMickey,
   type MickeyEngineState,
@@ -33,6 +37,7 @@ const settings: SettingDefinition[] = [
     type: "toggle",
     default: false,
   },
+  shanghaiSetting,
 ];
 
 export const mickeyMouseManifest: GameManifest<MickeyEngineState> = {
@@ -44,6 +49,9 @@ export const mickeyMouseManifest: GameManifest<MickeyEngineState> = {
   init: initMickey,
   applyThrow: applyThrowMickey,
   selectScoreboard: selectScoreboardMickey,
+  getTurnHint: getTurnHintMickey,
+  getBoardHints: getBoardHintsMickey,
+  getQuickInputs: getQuickInputsMickey,
   getCandidatesForThrow,
   view: (props) => ScoreboardPanel(props),
 };

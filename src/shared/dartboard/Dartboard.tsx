@@ -13,6 +13,7 @@ export interface DartboardThrow {
   cx: number;
   cy: number;
   label: string;
+  intent?: string;
 }
 
 export interface ActiveDot {
@@ -91,8 +92,7 @@ const REGIONS: SegmentRegion[] = SEGMENT_ORDER.map((n, i) => {
 });
 
 function isLightWedge(idx: number): boolean {
-  // Alternate cream/black around the board
-  return idx % 2 === 0;
+  return idx % 2 === 1;
 }
 
 function makeFlashKey(): number {

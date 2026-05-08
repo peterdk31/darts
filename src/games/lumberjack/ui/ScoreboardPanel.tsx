@@ -1,6 +1,7 @@
 import type { ResolvedSettings } from "@/shared/types/game-module";
 import type { Team } from "@/shared/types/core";
 import { getTeamLabel } from "@/shared/teams/teamLabel";
+import { CollapsibleScoreboard, ScoreSummary } from "@/shared/components/CollapsibleScoreboard";
 import {
   LUMBERJACK_ROUNDS,
   type LumberjackEngineState,
@@ -49,22 +50,18 @@ function renderCell(
 }
 
 export function ScoreboardPanel({ state, teams }: Props) {
-  const inProgress = state.currentRound < LUMBERJACK_ROUNDS.length;
-  const currentRound = inProgress ? LUMBERJACK_ROUNDS[state.currentRound]! : null;
-
   return (
-    <div className={styles.panel}>
-      <div className={styles.chips}>
-        {currentRound && (
-          <span className={styles.chip}>
-            Rd {state.currentRound + 1}/10 &middot; {currentRound.label}
-          </span>
-        )}
-        {state.dtAbove15Only && (
-          <span className={styles.chip}>D/T 16+</span>
-        )}
-      </div>
-
+    <CollapsibleScoreboard
+      summary={
+        <ScoreSummary
+          teams={teams.map((t) => ({
+            colorId: t.colorId,
+            label: getTeamLabel(t),
+            value: String(state.scoreByTeam[t.id] ?? 0),
+          }))}
+        />
+      }
+    >
       <table className={styles.grid}>
         <thead>
           <tr>
@@ -119,6 +116,6 @@ export function ScoreboardPanel({ state, teams }: Props) {
           </tr>
         </tbody>
       </table>
-    </div>
+    </CollapsibleScoreboard>
   );
 }

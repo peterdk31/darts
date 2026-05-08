@@ -116,17 +116,6 @@
   max-width: 240px;
 }
 
-.quickAddForm {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-.quickAddInput {
-  flex: 1;
-  min-width: 120px;
-}
-
 .emptyRoster {
   margin: 0;
   color: var(--color-fg-muted);

@@ -82,6 +82,19 @@ export interface BoardHints {
   highlightBullInner?: boolean;
 }
 
+export interface QuickInputAction {
+  label: string;
+  segment: ThrowSegment;
+  multiplier: 1 | 2 | 3;
+  score: number;
+  intent?: string;
+}
+
+export interface QuickInputGroup {
+  label?: string;
+  actions: QuickInputAction[];
+}
+
 export interface ScoreboardHit {
   segment: ThrowSegment;
   multiplier: 1 | 2 | 3;
@@ -104,10 +117,12 @@ export interface GameManifest<EngineState = unknown> {
     teams: ReadonlyArray<Team>;
     onScoreboardHit?: (hit: ScoreboardHit) => void;
   }) => ReactNode;
-  getBoardHints?(state: EngineState): BoardHints;
+  getTurnHint(state: EngineState, teamId: string): { label: string; value: string } | null;
+  getBoardHints(state: EngineState): BoardHints;
   getCandidatesForThrow?(
     state: EngineState,
     throw_: ThrowRecord,
   ): ReadonlyArray<{ intent: string; label: string }>;
+  getQuickInputs?(state: EngineState): QuickInputGroup[] | null;
   migrate?(prior: { schemaVersion: number; state: unknown }): EngineState;
 }

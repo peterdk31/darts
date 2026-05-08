@@ -1,0 +1,81 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+}
+
+/* Desktop: show details, hide summary + toggle */
+.summary {
+  display: none;
+}
+
+.toggle {
+  display: none;
+}
+
+/* Score summary helpers */
+.scores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: center;
+}
+
+.scoreEntry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.scoreDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.scoreLabel {
+  font-weight: 500;
+}
+
+.scoreValue {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mobile: show summary + toggle, hide details unless expanded */
+@media (max-width: 699px) {
+  .summary {
+    display: block;
+  }
+
+  .details {
+    display: none;
+  }
+
+  .toggle {
+    display: block;
+    background: none;
+    border: none;
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    padding: var(--space-1) 0;
+    text-align: center;
+    width: 100%;
+  }
+
+  .wrapper[data-expanded] .summary {
+    display: none;
+  }
+
+  .wrapper[data-expanded] .details {
+    display: block;
+  }
+}

@@ -28,31 +28,102 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  padding: var(--space-3);
+  padding: var(--space-2);
   min-width: 180px;
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
   z-index: 50;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+}
+
+@media (max-width: 699px) {
+  .popover {
+    position: fixed;
+    top: 56px;
+    right: 8px;
+    min-width: 0;
+    width: min(240px, calc(100vw - 16px));
+  }
 }
 
 .title {
-  font-size: var(--text-sm);
+  font-size: var(--text-xs, 0.75rem);
   font-weight: 600;
   color: var(--color-fg-muted);
-  margin-bottom: var(--space-1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 0;
 }
 
 .titleSeparated {
-  margin-top: var(--space-2);
-  padding-top: var(--space-2);
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
   border-top: 1px solid var(--color-border);
 }
 
-.row {
+.segmented {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.seg {
+  flex: 1;
+  text-align: center;
+  padding: 4px var(--space-1);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  background: transparent;
+  border-right: 1px solid var(--color-border);
+}
+
+.seg:last-child {
+  border-right: none;
+}
+
+.seg input {
+  display: none;
+}
+
+.segActive {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.settingsToggle {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) 0;
-  cursor: pointer;
+  gap: var(--space-1);
+  padding: 2px 0;
+  font-size: var(--text-sm);
+  color: var(--color-fg-muted);
+}
+
+.toggleOn {
+  color: var(--color-fg);
+}
+
+.toggleMark {
+  width: 1em;
+  text-align: center;
+  font-weight: 700;
+}
+
+.settingsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+  font-size: var(--text-sm);
+}
+
+.settingsLabel {
+  color: var(--color-fg-muted);
+}
+
+.settingsValue {
+  font-weight: 700;
 }

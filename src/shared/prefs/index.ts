@@ -1,7 +1,7 @@
 import { storage, StorageCorruptError } from "@/shared/storage";
 
 export type BoardTheme = "traditional" | "desaturated";
-export type BoardLayout = "classic" | "grid";
+export type BoardLayout = "classic" | "grid" | "quick";
 
 export interface UserPrefs {
   boardTheme: BoardTheme;
@@ -24,7 +24,7 @@ export function loadPrefs(): UserPrefs {
       boardTheme:
         data?.boardTheme === "desaturated" ? "desaturated" : "traditional",
       boardLayout:
-        data?.boardLayout === "grid" ? "grid" : "classic",
+        data?.boardLayout === "grid" ? "grid" : data?.boardLayout === "quick" ? "quick" : "classic",
     };
   } catch (err) {
     if (err instanceof StorageCorruptError) {

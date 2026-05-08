@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Dartboard, type ActiveDot, type DartboardThrow } from "@/shared/dartboard/Dartboard";
 import { GridBoard } from "@/shared/dartboard/GridBoard";
+import { QuickBoard } from "@/shared/dartboard/QuickBoard";
 import { TurnIndicatorCard } from "@/shell/components/TurnIndicatorCard";
 import { BustBanner } from "@/shell/components/BustBanner";
+import { PlayerSwitchOverlay } from "@/shell/components/PlayerSwitchOverlay";
 import { BoardSettingsMenu } from "@/shell/components/BoardSettingsMenu";
 import { AbandonConfirmModal } from "@/shell/components/AbandonConfirmModal";
 import { IntentChooser } from "@/games/mickey-mouse/ui/IntentChooser";
@@ -16,9 +18,10 @@ import type {
   InProgressGame,
 } from "@/shell/session/types";
 import type { ScoreboardHit, ThrowEffect } from "@/shared/types/game-module";
-import type { ThrowRecord, ThrowSegment } from "@/shared/types/core";
+import type { TeamColorId, ThrowRecord, ThrowSegment } from "@/shared/types/core";
 import { getTeamLabel } from "@/shared/teams/teamLabel";
 import { computeWinSummary } from "@/shell/stats/computeWinSummary";
+import { detectShanghai } from "@/shared/shanghai";
 import styles from "./PlayPage.module.css";
 
 function deriveTurnDots(
@@ -48,6 +51,10 @@ export function PlayPage() {
     record: ThrowRecord;
     candidates: ReadonlyArray<{ intent: string; label: string }>;
   } | null>(null);
+  const [switchOverlay, setSwitchOverlay] = useState<{
+    playerName: string;
+    teamColorId: TeamColorId;
+  } | null>(null);
   const [turnDots, setTurnDots] = useState<ActiveDot[]>([]);
   const [dotsFading, setDotsFading] = useState(false);
   const fadeTimerRef = useRef<number | null>(null);
@@ -59,6 +66,7 @@ export function PlayPage() {
   const redoDotsRef = useRef<Array<ActiveDot | null>>([]);
   const dotsGameIdRef = useRef<string | null>(null);
   const winRecorded = useRef<string | null>(null);
+  const pendingOverlayRef = useRef<{ playerName: string; teamColorId: TeamColorId } | null>(null);
 
   if (game && dotsGameIdRef.current !== game.id) {
     dotsGameIdRef.current = game.id;
@@ -121,6 +129,7 @@ export function PlayPage() {
         summary: computeWinSummary(
           game.gameTypeId, game.teams, replay.winnerTeamIds, game.throws, replay.engineState,
         ),
+        finalEngineState: replay.engineState,
       };
       dispatch({ type: "recordCompletedGame", record });
       navigate("/end", { replace: true });
@@ -146,8 +155,13 @@ export function PlayPage() {
   const allotment = dartsAllotmentForCurrentPlayer();
 
   const scoreboard = manifest.selectScoreboard(game.engineState);
-  const boardHints = manifest.getBoardHints?.(game.engineState);
+  const boardHints = manifest.getBoardHints(game.engineState);
+  const turnHint = manifest.getTurnHint(game.engineState, game.currentTurn.teamId);
   const ViewPanel = manifest.view;
+  const hasQuickInputs = !!manifest.getQuickInputs;
+  const quickInputs = manifest.getQuickInputs?.(game.engineState) ?? null;
+  const useQuickBoard = prefs.boardLayout === "quick" && hasQuickInputs && quickInputs !== null;
+  const effectiveLayout = useQuickBoard ? "quick" : prefs.boardLayout === "quick" ? "grid" : prefs.boardLayout;
 
   function handleMiss() {
     handleThrow({
@@ -164,8 +178,19 @@ export function PlayPage() {
     if (!game || !manifest) return;
 
     const r = applyOne(manifest, game.engineState, game.currentTurn, throwRecord);
-    const won = r.effects.some((e) => e.kind === "gameWon");
+    let won = r.effects.some((e) => e.kind === "gameWon");
     const bust = r.effects.find((e): e is Extract<ThrowEffect, { kind: "bust" }> => e.kind === "bust");
+
+    const allThrows = [...game.throws, throwRecord];
+    const shanghaiEnabled = game.resolvedSettings["shanghai"] === true;
+    let shanghaiWin = false;
+    if (shanghaiEnabled && game.currentTurn.dartsThrownThisTurn === 2) {
+      const last3 = allThrows.slice(-3).filter((t) => t.playerId === throwRecord.playerId);
+      if (last3.length === 3 && detectShanghai(last3)) {
+        shanghaiWin = true;
+        won = true;
+      }
+    }
 
     dispatch({
       type: "appendThrow",
@@ -174,7 +199,48 @@ export function PlayPage() {
       currentTurn: r.turn,
     });
 
+    if (shanghaiWin) {
+      winRecorded.current = game.id;
+      const record: CompletedGameRecord = {
+        id: game.id,
+        gameTypeId: game.gameTypeId,
+        resolvedSettings: game.resolvedSettings,
+        teams: game.teams,
+        winnerTeamIds: [game.currentTurn.teamId],
+        completedAt: new Date().toISOString(),
+        summary: computeWinSummary(
+          game.gameTypeId, game.teams, [game.currentTurn.teamId], allThrows, r.state,
+        ),
+        finalEngineState: r.state,
+      };
+      dispatch({ type: "recordCompletedGame", record });
+      navigate("/end", { replace: true });
+      return;
+    }
+
+    const turnAdvance = r.effects.find(
+      (e): e is Extract<ThrowEffect, { kind: "turnAdvance" }> => e.kind === "turnAdvance",
+    );
+    if (turnAdvance && turnAdvance.nextTeamId !== game.currentTurn.teamId && !won) {
+      const nextTeam = game.teams.find((t) => t.id === turnAdvance.nextTeamId);
+      const nextPlayer = nextTeam?.players.find((p) => p.id === turnAdvance.nextPlayerId);
+      if (nextTeam && nextPlayer) {
+        const overlayData = { playerName: nextPlayer.displayName, teamColorId: nextTeam.colorId };
+        if (bust) {
+          pendingOverlayRef.current = overlayData;
+        } else {
+          setSwitchOverlay(overlayData);
+        }
+      }
+    }
+
     if (bust) {
+      setTurnDots([]);
+      setDotsFading(false);
+      if (fadeTimerRef.current !== null) {
+        window.clearTimeout(fadeTimerRef.current);
+        fadeTimerRef.current = null;
+      }
       if (bust.label || bust.detail) {
         setBustBanner({ label: bust.label, detail: bust.detail });
       } else {
@@ -193,7 +259,6 @@ export function PlayPage() {
       );
       if (winnerEff) {
         winRecorded.current = game.id;
-        const allThrows = [...game.throws, throwRecord];
         const record: CompletedGameRecord = {
           id: game.id,
           gameTypeId: game.gameTypeId,
@@ -204,6 +269,7 @@ export function PlayPage() {
           summary: computeWinSummary(
             game.gameTypeId, game.teams, winnerEff.winnerTeamIds, allThrows, r.state,
           ),
+          finalEngineState: r.state,
         };
         dispatch({ type: "recordCompletedGame", record });
         navigate("/end", { replace: true });
@@ -244,12 +310,15 @@ export function PlayPage() {
       multiplier: t.multiplier,
       score: t.score,
       timestamp: new Date().toISOString(),
+      ...(t.intent ? { intent: t.intent } : {}),
     };
 
-    const candidates = manifest.getCandidatesForThrow?.(game.engineState, throwRecord) ?? [];
-    if (candidates.length === 2) {
-      setPendingIntent({ record: throwRecord, candidates });
-      return;
+    if (!t.intent) {
+      const candidates = manifest.getCandidatesForThrow?.(game.engineState, throwRecord) ?? [];
+      if (candidates.length === 2) {
+        setPendingIntent({ record: throwRecord, candidates });
+        return;
+      }
     }
 
     proceedWithThrow(throwRecord);
@@ -386,6 +455,7 @@ export function PlayPage() {
         summary: computeWinSummary(
           game.gameTypeId, game.teams, replay.winnerTeamIds, newThrows, replay.engineState,
         ),
+        finalEngineState: replay.engineState,
       };
       dispatch({ type: "recordCompletedGame", record });
       navigate("/end", { replace: true });
@@ -414,6 +484,9 @@ export function PlayPage() {
           boardLayout={prefs.boardLayout}
           onChangeTheme={(theme) => setPrefs({ ...prefs, boardTheme: theme })}
           onChangeLayout={(layout) => setPrefs({ ...prefs, boardLayout: layout })}
+          settingsSchema={manifest.settingsSchema}
+          resolvedSettings={game.resolvedSettings}
+          hasQuickInputs={hasQuickInputs}
         />
       </div>
 
@@ -424,7 +497,7 @@ export function PlayPage() {
               state: game.engineState,
               resolvedSettings: game.resolvedSettings,
               teams: game.teams,
-              onScoreboardHit: bustBanner || pendingIntent ? undefined : handleScoreboardHit,
+              onScoreboardHit: bustBanner || pendingIntent || switchOverlay ? undefined : handleScoreboardHit,
             }) as ReactElement | null)
           ) : (
             <DefaultScoreboard rows={scoreboard.rows} game={game} />
@@ -432,11 +505,26 @@ export function PlayPage() {
         </div>
 
         <div className={styles.boardSlot}>
-          {prefs.boardLayout === "grid" ? (
+          {turnHint && (
+            <div
+              className={styles.turnHint}
+              style={{ "--turn-color": `var(--team-color-${currentTeam.colorId})` } as React.CSSProperties}
+            >
+              <span className={styles.turnHintLabel}>{turnHint.label}</span>
+              <span className={styles.turnHintValue}>{turnHint.value}</span>
+            </div>
+          )}
+          {useQuickBoard ? (
+            <QuickBoard
+              groups={quickInputs!}
+              onThrow={handleThrow}
+              disabled={bustBanner !== null || pendingIntent !== null || switchOverlay !== null}
+            />
+          ) : effectiveLayout === "grid" ? (
             <GridBoard
               onThrow={handleThrow}
               boardHints={boardHints}
-              disabled={bustBanner !== null || pendingIntent !== null}
+              disabled={bustBanner !== null || pendingIntent !== null || switchOverlay !== null}
               overlay={
                 pendingIntent ? (
                   <IntentChooser
@@ -454,7 +542,7 @@ export function PlayPage() {
               dotsFading={dotsFading}
               boardHints={boardHints}
               boardTheme={prefs.boardTheme}
-              disabled={bustBanner !== null || pendingIntent !== null}
+              disabled={bustBanner !== null || pendingIntent !== null || switchOverlay !== null}
               overlay={
                 pendingIntent ? (
                   <IntentChooser
@@ -465,20 +553,24 @@ export function PlayPage() {
               }
             />
           )}
-          <Button
-            variant="secondary"
-            onClick={handleMiss}
-            disabled={bustBanner !== null || pendingIntent !== null}
-            className={styles.missBtn}
-          >
-            Miss
-          </Button>
+          {!useQuickBoard && (
+            <div className={styles.boardActions}>
+              <Button
+                variant="secondary"
+                onClick={handleMiss}
+                disabled={bustBanner !== null || pendingIntent !== null || switchOverlay !== null}
+                className={styles.missBtn}
+              >
+                Miss
+              </Button>
+            </div>
+          )}
           <div className={styles.controls}>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleUndo}
-              disabled={game.throws.length === 0 || bustBanner !== null || pendingIntent !== null}
+              disabled={game.throws.length === 0 || bustBanner !== null || pendingIntent !== null || switchOverlay !== null}
             >
               ← Undo last
             </Button>
@@ -487,7 +579,7 @@ export function PlayPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleRedo}
-                disabled={bustBanner !== null || pendingIntent !== null}
+                disabled={bustBanner !== null || pendingIntent !== null || switchOverlay !== null}
               >
                 Redo →
               </Button>
@@ -501,8 +593,22 @@ export function PlayPage() {
         open={bustBanner !== null}
         label={bustBanner?.label}
         detail={bustBanner?.detail}
-        onDismiss={() => setBustBanner(null)}
+        onDismiss={() => {
+          setBustBanner(null);
+          if (pendingOverlayRef.current) {
+            setSwitchOverlay(pendingOverlayRef.current);
+            pendingOverlayRef.current = null;
+          }
+        }}
       />
+
+      {switchOverlay && (
+        <PlayerSwitchOverlay
+          playerName={switchOverlay.playerName}
+          teamColorId={switchOverlay.teamColorId}
+          onDismiss={() => setSwitchOverlay(null)}
+        />
+      )}
 
       <AbandonConfirmModal
         open={abandonOpen}
@@ -513,6 +619,7 @@ export function PlayPage() {
           navigate("/games");
         }}
       />
+
     </div>
   );
 }
