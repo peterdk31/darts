@@ -60,9 +60,7 @@ export function ScoreboardPanel({ state, teams }: Props) {
             Rd {state.currentRound + 1}/10 &middot; {currentRound.label}
           </span>
         )}
-        {state.dtAbove15Only && (
-          <span className={styles.chip}>D/T 16+</span>
-        )}
+        <span className={styles.chip}>{state.dtAbove15Only ? "D/T 16+" : "D/T any"}</span>
       </div>
 
       <table className={styles.grid}>

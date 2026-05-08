@@ -64,12 +64,15 @@ export function ScoreboardPanel({ state, teams, onScoreboardHit }: Props) {
         </thead>
         <tbody>
           {state.targets.map((tg) => {
+            const globallyClosed = teams.every(
+              (t) => (state.marksByTeam[t.id]?.[String(tg)] ?? 0) >= 3,
+            );
             const disabled = (currentMarks[String(tg)] ?? 0) >= 3;
             const clickable = !!onScoreboardHit && !disabled;
             return (
               <tr
                 key={String(tg)}
-                className={`${disabled ? styles.disabled : ""} ${clickable ? styles.clickable : ""}`}
+                className={`${globallyClosed ? styles.globallyClosed : disabled ? styles.disabled : ""} ${clickable ? styles.clickable : ""}`}
                 onClick={clickable ? () => onScoreboardHit(hitForTarget(tg)) : undefined}
               >
                 <th scope="row" className={styles.targetCell}>

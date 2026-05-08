@@ -42,8 +42,6 @@ export function TeamSetupPage() {
   const [teams, setLocalTeams] = useState<Team[]>(() =>
     state.teams.length > 0 ? state.teams : [],
   );
-  const [quickAddTeamId, setQuickAddTeamId] = useState<string | null>(null);
-  const [quickAddName, setQuickAddName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -113,41 +111,6 @@ export function TeamSetupPage() {
     );
   }
 
-  function startQuickAdd(teamId: string) {
-    setQuickAddTeamId(teamId);
-    setQuickAddName("");
-  }
-
-  function commitQuickAdd() {
-    if (!quickAddTeamId) return;
-    const trimmed = quickAddName.trim();
-    if (!trimmed) {
-      setQuickAddTeamId(null);
-      return;
-    }
-    try {
-      const rp = playerStore.add(trimmed);
-      const player: Player = { id: rp.id, displayName: rp.displayName };
-      commit(
-        visibleTeams.map((t) =>
-          t.id === quickAddTeamId && t.players.length < MAX_PLAYERS
-            ? { ...t, players: [...t.players, player] }
-            : t,
-        ),
-      );
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add player");
-    }
-    setQuickAddTeamId(null);
-    setQuickAddName("");
-  }
-
-  function handleQuickAddKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") commitQuickAdd();
-    if (e.key === "Escape") setQuickAddTeamId(null);
-  }
-
   const validTeams = visibleTeams.filter(
     (t) => t.players.length >= 1,
   );
@@ -182,12 +145,12 @@ export function TeamSetupPage() {
             >
               Add players first
             </button>{" "}
-            or use quick-add below to create players as you build teams.
+            to start building teams.
           </p>
         ) : (
           <p className={styles.help}>
             Add 2-8 teams, with 1-4 players per team. Select players from
-            your roster or quick-add new ones.
+            your roster.
           </p>
         )}
       </header>
@@ -263,49 +226,23 @@ export function TeamSetupPage() {
               <p className={styles.emptyRoster}>No players assigned yet.</p>
             )}
 
-            {team.players.length < MAX_PLAYERS && (
+            {team.players.length < MAX_PLAYERS && availablePlayers.length > 0 && (
               <div className={styles.assignSection}>
-                {availablePlayers.length > 0 && (
-                  <select
-                    className={styles.playerSelect}
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) assignPlayer(team.id, e.target.value);
-                    }}
-                    aria-label={`Add player to team ${teamIdx + 1}`}
-                  >
-                    <option value="">Select a player...</option>
-                    {availablePlayers.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.displayName}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {quickAddTeamId === team.id ? (
-                  <div className={styles.quickAddForm}>
-                    <input
-                      className={styles.quickAddInput}
-                      type="text"
-                      placeholder="New player name"
-                      maxLength={30}
-                      value={quickAddName}
-                      onChange={(e) => setQuickAddName(e.target.value)}
-                      onKeyDown={handleQuickAddKeyDown}
-                      onBlur={commitQuickAdd}
-                      autoFocus
-                      aria-label="Quick add player name"
-                    />
-                  </div>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => startQuickAdd(team.id)}
-                  >
-                    + Quick add player
-                  </Button>
-                )}
+                <select
+                  className={styles.playerSelect}
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) assignPlayer(team.id, e.target.value);
+                  }}
+                  aria-label={`Add player to team ${teamIdx + 1}`}
+                >
+                  <option value="">Select a player...</option>
+                  {availablePlayers.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.displayName}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
           </li>

@@ -49,6 +49,10 @@
   text-align: center;
   font-size: var(--text-sm);
   font-weight: 600;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .teamHeader .dot {
@@ -86,4 +90,13 @@
 
 .disabled {
   opacity: 0.35;
+}
+
+.globallyClosed {
+  opacity: 0.25;
+  background: var(--color-surface-2);
+}
+
+.globallyClosed .targetCell {
+  text-decoration: line-through;
 }
