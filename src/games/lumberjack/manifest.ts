@@ -1,7 +1,10 @@
 import type { GameManifest, SettingDefinition } from "@/shared/types/game-module";
+import { shanghaiSetting } from "@/shared/shanghai";
 import {
   applyThrowLumberjack,
   getBoardHintsLumberjack,
+  getQuickInputsLumberjack,
+  getTurnHintLumberjack,
   initLumberjack,
   selectScoreboardLumberjack,
   type LumberjackEngineState,
@@ -15,6 +18,7 @@ const settings: SettingDefinition[] = [
     type: "toggle",
     default: false,
   },
+  shanghaiSetting,
 ];
 
 export const lumberjackManifest: GameManifest<LumberjackEngineState> = {
@@ -26,6 +30,8 @@ export const lumberjackManifest: GameManifest<LumberjackEngineState> = {
   init: initLumberjack,
   applyThrow: applyThrowLumberjack,
   selectScoreboard: selectScoreboardLumberjack,
+  getTurnHint: getTurnHintLumberjack,
   getBoardHints: getBoardHintsLumberjack,
+  getQuickInputs: getQuickInputsLumberjack,
   view: (props) => ScoreboardPanel(props),
 };

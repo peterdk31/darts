@@ -1,7 +1,10 @@
 import type { Team, ThrowRecord } from "@/shared/types/core";
 import type {
   ApplyThrowResult,
+  BoardHints,
+  DartSegment,
   InitContext,
+  QuickInputGroup,
   ScoreboardSummary,
   ThrowEffect,
 } from "@/shared/types/game-module";
@@ -214,14 +217,62 @@ export function selectScoreboardCricket(state: CricketEngineState): ScoreboardSu
   return { rows };
 }
 
-export function getBoardHintsCricket(state: CricketEngineState) {
-  // Dim numbers closed by every team.
-  const dim: (15 | 16 | 17 | 18 | 19 | 20 | "bull")[] = [];
+export function getTurnHintCricket(state: CricketEngineState, teamId: string): { label: string; value: string } | null {
+  const marks = state.marksByTeam[teamId] ?? {};
+  const open = CRICKET_TARGETS.filter((tg) => (marks[String(tg)] ?? 0) < 3);
+  if (open.length === 0) return null;
+  return { label: "Open", value: open.map((tg) => (tg === "bull" ? "B" : String(tg))).join(" ") };
+}
+
+export function getBoardHintsCricket(state: CricketEngineState): BoardHints {
+  const teamId = state.turnOrder[state.pointer.teamIdx]!;
+  const marks = state.marksByTeam[teamId] ?? {};
+  const highlight: DartSegment[] = [];
+  const dim: DartSegment[] = [];
   for (const tg of CRICKET_TARGETS) {
     const allClosed = state.teams.every(
       (t) => isClosed(state.marksByTeam[t.id]?.[String(tg)] ?? 0),
     );
-    if (allClosed) dim.push(tg);
+    if (allClosed) {
+      dim.push(tg);
+    } else if ((marks[String(tg)] ?? 0) < 3) {
+      highlight.push(tg);
+    }
   }
-  return { dim };
+  return { highlight, dim };
+}
+
+export function getQuickInputsCricket(
+  state: CricketEngineState,
+): QuickInputGroup[] | null {
+  if (state.status !== "in-progress") return null;
+  const groups: QuickInputGroup[] = [];
+
+  for (const tg of CRICKET_TARGETS) {
+    const allClosed = state.teams.every(
+      (t) => isClosed(state.marksByTeam[t.id]?.[String(tg)] ?? 0),
+    );
+    if (allClosed) continue;
+
+    if (tg === "bull") {
+      groups.push({
+        label: "Bull",
+        actions: [
+          { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25 },
+          { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 },
+        ],
+      });
+    } else {
+      groups.push({
+        actions: [
+          { label: String(tg), segment: tg, multiplier: 1, score: tg },
+          { label: `D${tg}`, segment: tg, multiplier: 2, score: tg * 2 },
+          { label: `T${tg}`, segment: tg, multiplier: 3, score: tg * 3 },
+        ],
+      });
+    }
+  }
+
+  groups.push({ actions: [{ label: "Miss", segment: "miss", multiplier: 1, score: 0 }] });
+  return groups;
 }

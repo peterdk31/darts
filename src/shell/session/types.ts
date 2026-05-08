@@ -36,6 +36,7 @@ export interface CompletedGameRecord {
   winnerTeamIds: string[];
   completedAt: string;
   summary?: unknown;
+  finalEngineState?: unknown;
 }
 
 export interface SessionState {

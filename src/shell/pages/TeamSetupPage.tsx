@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Player, Team } from "@/shared/types/core";
+import type { Team } from "@/shared/types/core";
 import { assignNextColor, COLOR_LABELS } from "@/shared/teams/colors";
 import { Button } from "@/shared/components/Button";
 import { useNavigate, useParams } from "@/shared/routing/router";
@@ -27,10 +27,19 @@ function makeTeam(existing: ReadonlyArray<Team>): Team {
   };
 }
 
-function pruneDeletedPlayers(teams: Team[], activeIds: Set<string>): Team[] {
+interface LocalTeam {
+  id: string;
+  displayName: string;
+  colorId: Team["colorId"];
+  playerIds: string[];
+}
+
+function toLocal(teams: ReadonlyArray<Team>): LocalTeam[] {
   return teams.map((t) => ({
-    ...t,
-    players: t.players.filter((p) => activeIds.has(p.id)),
+    id: t.id,
+    displayName: t.displayName,
+    colorId: t.colorId,
+    playerIds: t.players.map((p) => p.id),
   }));
 }
 
@@ -39,63 +48,67 @@ export function TeamSetupPage() {
   const gameId = decodeURIComponent(rawGameId ?? "");
   const { state, dispatch } = useSession();
   const navigate = useNavigate();
-  const [teams, setLocalTeams] = useState<Team[]>(() =>
-    state.teams.length > 0 ? state.teams : [],
+  const [teams, setLocalTeams] = useState<LocalTeam[]>(() =>
+    state.teams.length > 0 ? toLocal(state.teams) : [],
   );
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (teams.length === 0 && state.teams.length > 0) {
-      setLocalTeams(state.teams);
+      setLocalTeams(toLocal(state.teams));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.teams]);
 
   const rosterPlayers = playerStore.getActive();
-  const activeIds = new Set(rosterPlayers.map((p) => p.id));
+  const rosterById = new Map(rosterPlayers.map((p) => [p.id, p]));
 
-  useEffect(() => {
-    const pruned = pruneDeletedPlayers(teams, activeIds);
-    if (pruned.some((t, i) => t.players.length !== teams[i]!.players.length)) {
-      setLocalTeams(pruned);
-      dispatch({ type: "setTeams", teams: pruned });
-    }
-  }); // eslint-disable-line react-hooks/exhaustive-deps
+  function resolve(lt: LocalTeam): Team {
+    return {
+      id: lt.id,
+      displayName: lt.displayName,
+      colorId: lt.colorId,
+      players: lt.playerIds
+        .filter((pid) => rosterById.has(pid))
+        .map((pid) => {
+          const rp = rosterById.get(pid)!;
+          return { id: rp.id, displayName: rp.displayName };
+        }),
+    };
+  }
 
-  const visibleTeams = pruneDeletedPlayers(teams, activeIds);
-  const assignedPlayerIds = new Set(visibleTeams.flatMap((t) => t.players.map((p) => p.id)));
+  const visibleTeams = teams.map(resolve);
+  const assignedPlayerIds = new Set(teams.flatMap((t) => t.playerIds));
   const availablePlayers = rosterPlayers.filter((p) => !assignedPlayerIds.has(p.id));
 
-  function commit(next: Team[]) {
+  function commit(next: LocalTeam[]) {
     setLocalTeams(next);
-    dispatch({ type: "setTeams", teams: next });
+    dispatch({ type: "setTeams", teams: next.map(resolve) });
   }
 
   function addTeam() {
-    if (visibleTeams.length >= MAX_TEAMS) return;
-    commit([...visibleTeams, makeTeam(visibleTeams)]);
+    if (teams.length >= MAX_TEAMS) return;
+    const newTeam = makeTeam(visibleTeams);
+    commit([...teams, { id: newTeam.id, displayName: newTeam.displayName, colorId: newTeam.colorId, playerIds: [] }]);
   }
 
   function removeTeam(id: string) {
-    commit(visibleTeams.filter((t) => t.id !== id));
+    commit(teams.filter((t) => t.id !== id));
   }
 
   function moveTeam(index: number, direction: -1 | 1) {
     const target = index + direction;
-    if (target < 0 || target >= visibleTeams.length) return;
-    const next = [...visibleTeams];
+    if (target < 0 || target >= teams.length) return;
+    const next = [...teams];
     [next[index], next[target]] = [next[target]!, next[index]!];
     commit(next);
   }
 
   function assignPlayer(teamId: string, playerId: string) {
-    const rp = rosterPlayers.find((p) => p.id === playerId);
-    if (!rp) return;
-    const player: Player = { id: rp.id, displayName: rp.displayName };
+    if (!rosterById.has(playerId)) return;
     commit(
-      visibleTeams.map((t) =>
-        t.id === teamId && t.players.length < MAX_PLAYERS
-          ? { ...t, players: [...t.players, player] }
+      teams.map((t) =>
+        t.id === teamId && t.playerIds.length < MAX_PLAYERS
+          ? { ...t, playerIds: [...t.playerIds, playerId] }
           : t,
       ),
     );
@@ -103,9 +116,9 @@ export function TeamSetupPage() {
 
   function removePlayer(teamId: string, playerId: string) {
     commit(
-      visibleTeams.map((t) =>
+      teams.map((t) =>
         t.id === teamId
-          ? { ...t, players: t.players.filter((p) => p.id !== playerId) }
+          ? { ...t, playerIds: t.playerIds.filter((pid) => pid !== playerId) }
           : t,
       ),
     );
@@ -154,12 +167,6 @@ export function TeamSetupPage() {
           </p>
         )}
       </header>
-
-      {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
-      )}
 
       <ul className={styles.teamList}>
         {visibleTeams.map((team, teamIdx) => (

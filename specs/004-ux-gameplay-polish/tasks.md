@@ -21,11 +21,11 @@
 
 ### Implementation
 
-- [ ] T001 [US1] Make .topRow sticky: add `position: sticky; top: 0; z-index: 20; background: var(--color-bg);` to `.topRow` in `src/shell/pages/PlayPage.module.css`
-- [ ] T002 [US1] Create PlayerSwitchOverlay component in `src/shell/components/PlayerSwitchOverlay.tsx` — full-screen overlay showing player name and team color, auto-dismisses after 2s or on tap, blocks interaction
-- [ ] T003 [US1] Create styles for PlayerSwitchOverlay in `src/shell/components/PlayerSwitchOverlay.module.css`
-- [ ] T004 [US1] Integrate PlayerSwitchOverlay into PlayPage in `src/shell/pages/PlayPage.tsx` — detect turn changes (team ID changed after appendThrow), show overlay after bust banner dismissal if bust occurred, otherwise show immediately; pass overlay state to Dartboard/GridBoard disabled prop
-- [ ] T005 [US1] Provide a brief user-perspective summary: the turn indicator is always visible at the top of the screen regardless of scroll position, and a prominent overlay announces the next player on every turn change (including after busts).
+- [X] T001 [US1] Make .topRow sticky: add `position: sticky; top: 0; z-index: 20; background: var(--color-bg);` to `.topRow` in `src/shell/pages/PlayPage.module.css`
+- [X] T002 [US1] Create PlayerSwitchOverlay component in `src/shell/components/PlayerSwitchOverlay.tsx` — full-screen overlay showing player name and team color, auto-dismisses after 2s or on tap, blocks interaction
+- [X] T003 [US1] Create styles for PlayerSwitchOverlay in `src/shell/components/PlayerSwitchOverlay.module.css`
+- [X] T004 [US1] Integrate PlayerSwitchOverlay into PlayPage in `src/shell/pages/PlayPage.tsx` — detect turn changes (team ID changed after appendThrow), show overlay after bust banner dismissal if bust occurred, otherwise show immediately; pass overlay state to Dartboard/GridBoard disabled prop
+- [X] T005 [US1] Provide a brief user-perspective summary: the turn indicator is always visible at the top of the screen regardless of scroll position, and a prominent overlay announces the next player on every turn change (including after busts).
 
 **Checkpoint**: Sticky header and player switch overlay work end-to-end.
 
@@ -41,9 +41,9 @@
 
 ### Implementation
 
-- [ ] T006 [US2] Reposition Miss button in `src/shell/pages/PlayPage.tsx` — move from below the board to a floating or inline-prominent position within `.boardSlot`, above or beside the undo controls
-- [ ] T007 [US2] Update `.missBtn` styles in `src/shell/pages/PlayPage.module.css` — make it visually prominent (larger tap target, distinct color/styling) and ensure it doesn't overlap the dartboard on mobile
-- [ ] T008 [US2] Provide a brief user-perspective summary: the Miss button is now immediately visible on the play screen without scrolling.
+- [X] T006 [US2] Reposition Miss button in `src/shell/pages/PlayPage.tsx` — move from below the board to a floating or inline-prominent position within `.boardSlot`, above or beside the undo controls
+- [X] T007 [US2] Update `.missBtn` styles in `src/shell/pages/PlayPage.module.css` — make it visually prominent (larger tap target, distinct color/styling) and ensure it doesn't overlap the dartboard on mobile
+- [X] T008 [US2] Provide a brief user-perspective summary: the Miss button is now immediately visible on the play screen without scrolling.
 
 **Checkpoint**: Miss button is prominent and accessible.
 
@@ -59,9 +59,9 @@
 
 ### Implementation
 
-- [ ] T009 [US3] Fix `isLightWedge` function in `src/shared/dartboard/Dartboard.tsx` — change `return idx % 2 === 0` to `return idx % 2 === 1` so that even indices (starting with 20 at index 0) are dark
-- [ ] T010 [US3] Verify GridBoard colors in `src/shared/dartboard/GridBoard.tsx` — check if the grid board has a similar color mapping and fix if needed
-- [ ] T011 [US3] Provide a brief user-perspective summary: the dartboard now shows correct real-world segment colors — 20 is black, 1 is cream.
+- [X] T009 [US3] Fix `isLightWedge` function in `src/shared/dartboard/Dartboard.tsx` — change `return idx % 2 === 0` to `return idx % 2 === 1` so that even indices (starting with 20 at index 0) are dark
+- [X] T010 [US3] Verify GridBoard colors in `src/shared/dartboard/GridBoard.tsx` — check if the grid board has a similar color mapping and fix if needed
+- [X] T011 [US3] Provide a brief user-perspective summary: the dartboard now shows correct real-world segment colors — 20 is black, 1 is cream.
 
 **Checkpoint**: Dartboard colors are correct.
 
@@ -77,8 +77,8 @@
 
 ### Implementation
 
-- [ ] T012 [US4] Clear turnDots on bust in `src/shell/pages/PlayPage.tsx` — in the `proceedWithThrow` function, when a bust is detected, call `setTurnDots([])` and `setDotsFading(false)` immediately (cancel any pending fade timer) before showing the bust banner
-- [ ] T013 [US4] Provide a brief user-perspective summary: dart dots are now cleared from the board immediately when a bust occurs.
+- [X] T012 [US4] Clear turnDots on bust in `src/shell/pages/PlayPage.tsx` — in the `proceedWithThrow` function, when a bust is detected, call `setTurnDots([])` and `setDotsFading(false)` immediately (cancel any pending fade timer) before showing the bust banner
+- [X] T013 [US4] Provide a brief user-perspective summary: dart dots are now cleared from the board immediately when a bust occurs.
 
 **Checkpoint**: Bust clears dots immediately.
 
@@ -94,9 +94,9 @@
 
 ### Implementation
 
-- [ ] T014 [US5] Add globally-closed detection logic in `src/games/mickey-mouse/ui/ScoreboardPanel.tsx` — for each target row, check if ALL teams have >= 3 marks (not just the current team); add a `globallyClosed` CSS class to the row when true
-- [ ] T015 [US5] Add `.globallyClosed` styles in `src/games/mickey-mouse/ui/ScoreboardPanel.module.css` — muted background, reduced opacity, and strikethrough on the target label; visually distinct from the existing `.disabled` class
-- [ ] T016 [US5] Provide a brief user-perspective summary: in Mickey Mouse, targets closed by all teams are now clearly grayed out and visually distinct from targets only closed by the current team.
+- [X] T014 [US5] Add globally-closed detection logic in `src/games/mickey-mouse/ui/ScoreboardPanel.tsx` — for each target row, check if ALL teams have >= 3 marks (not just the current team); add a `globallyClosed` CSS class to the row when true
+- [X] T015 [US5] Add `.globallyClosed` styles in `src/games/mickey-mouse/ui/ScoreboardPanel.module.css` — muted background, reduced opacity, and strikethrough on the target label; visually distinct from the existing `.disabled` class
+- [X] T016 [US5] Provide a brief user-perspective summary: in Mickey Mouse, targets closed by all teams are now clearly grayed out and visually distinct from targets only closed by the current team.
 
 **Checkpoint**: Globally closed cells are clearly distinguishable.
 
@@ -112,13 +112,13 @@
 
 ### Implementation
 
-- [ ] T017 [P] [US6] Add text truncation styles to TurnIndicatorCard in `src/shell/components/TurnIndicatorCard.tsx` and its CSS module — apply `overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` with appropriate `max-width` or `min-width: 0` on the name element
-- [ ] T018 [P] [US6] Add text truncation to Mickey Mouse scoreboard headers in `src/games/mickey-mouse/ui/ScoreboardPanel.module.css` — team name spans in `<th>` cells
-- [ ] T019 [P] [US6] Add text truncation to Lumberjack scoreboard headers in `src/games/lumberjack/ui/ScoreboardPanel.module.css` — team name spans in `<th>` cells
-- [ ] T020 [P] [US6] Add text truncation to default scoreboard `.scoreName` in `src/shell/pages/PlayPage.module.css`
-- [ ] T021 [P] [US6] Add text truncation to GameEndPage names in `src/shell/pages/GameEndPage.module.css` — `.teamName` and `.playerName` classes
-- [ ] T022 [P] [US6] Add text truncation to HistoryPage names in `src/shell/pages/HistoryPage.module.css` — `.winnerName` class
-- [ ] T023 [US6] Provide a brief user-perspective summary: long player and team names now truncate with ellipsis across all screens instead of breaking layouts.
+- [X] T017 [P] [US6] Add text truncation styles to TurnIndicatorCard in `src/shell/components/TurnIndicatorCard.tsx` and its CSS module — apply `overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` with appropriate `max-width` or `min-width: 0` on the name element
+- [X] T018 [P] [US6] Add text truncation to Mickey Mouse scoreboard headers in `src/games/mickey-mouse/ui/ScoreboardPanel.module.css` — team name spans in `<th>` cells
+- [X] T019 [P] [US6] Add text truncation to Lumberjack scoreboard headers in `src/games/lumberjack/ui/ScoreboardPanel.module.css` — team name spans in `<th>` cells
+- [X] T020 [P] [US6] Add text truncation to default scoreboard `.scoreName` in `src/shell/pages/PlayPage.module.css`
+- [X] T021 [P] [US6] Add text truncation to GameEndPage names in `src/shell/pages/GameEndPage.module.css` — `.teamName` and `.playerName` classes
+- [X] T022 [P] [US6] Add text truncation to HistoryPage names in `src/shell/pages/HistoryPage.module.css` — `.winnerName` class
+- [X] T023 [US6] Provide a brief user-perspective summary: long player and team names now truncate with ellipsis across all screens instead of breaking layouts.
 
 **Checkpoint**: Long names handled gracefully everywhere.
 
@@ -134,8 +134,8 @@
 
 ### Implementation
 
-- [ ] T024 [US7] Update settings chip rendering in `src/games/lumberjack/ui/ScoreboardPanel.tsx` — replace the conditional `{state.dtAbove15Only && <span className={styles.chip}>D/T 16+</span>}` with an always-rendered chip: `<span className={styles.chip}>{state.dtAbove15Only ? "D/T 16+" : "D/T any"}</span>`
-- [ ] T025 [US7] Provide a brief user-perspective summary: the Lumberjack settings chip now always shows the D/T setting ("D/T any" or "D/T 16+").
+- [X] T024 [US7] Update settings chip rendering in `src/games/lumberjack/ui/ScoreboardPanel.tsx` — replace the conditional `{state.dtAbove15Only && <span className={styles.chip}>D/T 16+</span>}` with an always-rendered chip: `<span className={styles.chip}>{state.dtAbove15Only ? "D/T 16+" : "D/T any"}</span>`
+- [X] T025 [US7] Provide a brief user-perspective summary: the Lumberjack settings chip now always shows the D/T setting ("D/T any" or "D/T 16+").
 
 **Checkpoint**: Lumberjack chip always accurate.
 
@@ -151,11 +151,11 @@
 
 ### Implementation
 
-- [ ] T026 [US8] Remove quick-add state, handlers, and JSX from `src/shell/pages/TeamSetupPage.tsx` — delete `quickAddTeamId`/`quickAddName` state, `startQuickAdd`/`commitQuickAdd` functions, the quick-add form JSX, and the quick-add button
-- [ ] T027 [US8] Remove quick-add CSS classes from `src/shell/pages/TeamSetupPage.module.css` — delete `.quickAddForm`, `.quickAddInput`, and any related styles
-- [ ] T028 [US8] Update help text in `src/shell/pages/TeamSetupPage.tsx` — remove references to "quick-add" in the instructional text
-- [ ] T029 [US8] Verify build passes — run `npm run build` to confirm no dead references
-- [ ] T030 [US8] Provide a brief user-perspective summary: the "Quick add player" feature has been removed from team setup.
+- [X] T026 [US8] Remove quick-add state, handlers, and JSX from `src/shell/pages/TeamSetupPage.tsx` — delete `quickAddTeamId`/`quickAddName` state, `startQuickAdd`/`commitQuickAdd` functions, the quick-add form JSX, and the quick-add button
+- [X] T027 [US8] Remove quick-add CSS classes from `src/shell/pages/TeamSetupPage.module.css` — delete `.quickAddForm`, `.quickAddInput`, and any related styles
+- [X] T028 [US8] Update help text in `src/shell/pages/TeamSetupPage.tsx` — remove references to "quick-add" in the instructional text
+- [X] T029 [US8] Verify build passes — run `npm run build` to confirm no dead references
+- [X] T030 [US8] Provide a brief user-perspective summary: the "Quick add player" feature has been removed from team setup.
 
 **Checkpoint**: Quick-add fully removed, clean build.
 
@@ -171,12 +171,12 @@
 
 ### Implementation
 
-- [ ] T031 [US9] Extend `CompletedGameRecord` type in `src/shell/session/types.ts` — add optional `finalEngineState?: unknown` field
-- [ ] T032 [US9] Persist final engine state when recording completed games in `src/shell/pages/PlayPage.tsx` — set `finalEngineState` on the `CompletedGameRecord` in `proceedWithThrow` (win path), `handleRedo` (win path), and the safety-net `useEffect`
-- [ ] T033 [US9] Add expandable detail view to HistoryRow in `src/shell/pages/HistoryPage.tsx` — add expand/collapse toggle state; when expanded, render the game's scoreboard panel (look up manifest.view or use DefaultScoreboard) using the stored `finalEngineState`
-- [ ] T034 [US9] Add expand/collapse styles in `src/shell/pages/HistoryPage.module.css`
-- [ ] T035 [US9] Handle graceful fallback in `src/shell/pages/HistoryPage.tsx` — if `finalEngineState` is undefined (old records), show "Detailed scoreboard not available for this game"
-- [ ] T036 [US9] Provide a brief user-perspective summary: completed games now show a full scoreboard in the history page when expanded; older games show a fallback message.
+- [X] T031 [US9] Extend `CompletedGameRecord` type in `src/shell/session/types.ts` — add optional `finalEngineState?: unknown` field
+- [X] T032 [US9] Persist final engine state when recording completed games in `src/shell/pages/PlayPage.tsx` — set `finalEngineState` on the `CompletedGameRecord` in `proceedWithThrow` (win path), `handleRedo` (win path), and the safety-net `useEffect`
+- [X] T033 [US9] Add expandable detail view to HistoryRow in `src/shell/pages/HistoryPage.tsx` — add expand/collapse toggle state; when expanded, render the game's scoreboard panel (look up manifest.view or use DefaultScoreboard) using the stored `finalEngineState`
+- [X] T034 [US9] Add expand/collapse styles in `src/shell/pages/HistoryPage.module.css`
+- [X] T035 [US9] Handle graceful fallback in `src/shell/pages/HistoryPage.tsx` — if `finalEngineState` is undefined (old records), show "Detailed scoreboard not available for this game"
+- [X] T036 [US9] Provide a brief user-perspective summary: completed games now show a full scoreboard in the history page when expanded; older games show a fallback message.
 
 **Checkpoint**: History page shows expandable scoreboards.
 
@@ -192,14 +192,14 @@
 
 ### Implementation
 
-- [ ] T037 [US10] Create Shanghai detection utility in `src/shared/shanghai.ts` — a pure function `detectShanghai(throws: ThrowRecord[]): boolean` that checks if the last 3 throws by the same player hit single, double, and triple of the same numeric segment (1-20, any order); also export a `shanghaiSetting: SettingDefinition` for reuse
-- [ ] T038 [P] [US10] Add Shanghai toggle to x01 manifest in `src/games/x01/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
-- [ ] T039 [P] [US10] Add Shanghai toggle to Mickey Mouse manifest in `src/games/mickey-mouse/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
-- [ ] T040 [P] [US10] Add Shanghai toggle to Lumberjack manifest in `src/games/lumberjack/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
-- [ ] T041 [P] [US10] Add Shanghai toggle to Cricket manifest in `src/games/cricket/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
-- [ ] T042 [P] [US10] Add Shanghai toggle to Around the Clock manifest in `src/games/around-the-clock/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
-- [ ] T043 [US10] Integrate Shanghai detection into PlayPage throw processing in `src/shell/pages/PlayPage.tsx` — after `proceedWithThrow` appends a throw, if Shanghai is enabled in `game.resolvedSettings` and the player just threw their 3rd dart, run `detectShanghai` on the last 3 throws; if true, emit a gameWon effect for the current team (same pattern as existing win handling)
-- [ ] T044 [US10] Provide a brief user-perspective summary: all games now have an optional "Shanghai" setting. When enabled, hitting single + double + triple of the same number in one turn wins the game instantly.
+- [X] T037 [US10] Create Shanghai detection utility in `src/shared/shanghai.ts` — a pure function `detectShanghai(throws: ThrowRecord[]): boolean` that checks if the last 3 throws by the same player hit single, double, and triple of the same numeric segment (1-20, any order); also export a `shanghaiSetting: SettingDefinition` for reuse
+- [X] T038 [P] [US10] Add Shanghai toggle to x01 manifest in `src/games/x01/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
+- [X] T039 [P] [US10] Add Shanghai toggle to Mickey Mouse manifest in `src/games/mickey-mouse/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
+- [X] T040 [P] [US10] Add Shanghai toggle to Lumberjack manifest in `src/games/lumberjack/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
+- [X] T041 [P] [US10] Add Shanghai toggle to Cricket manifest in `src/games/cricket/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
+- [X] T042 [P] [US10] Add Shanghai toggle to Around the Clock manifest in `src/games/around-the-clock/manifest.ts` — import `shanghaiSetting` and append to `settingsSchema`
+- [X] T043 [US10] Integrate Shanghai detection into PlayPage throw processing in `src/shell/pages/PlayPage.tsx` — after `proceedWithThrow` appends a throw, if Shanghai is enabled in `game.resolvedSettings` and the player just threw their 3rd dart, run `detectShanghai` on the last 3 throws; if true, emit a gameWon effect for the current team (same pattern as existing win handling)
+- [X] T044 [US10] Provide a brief user-perspective summary: all games now have an optional "Shanghai" setting. When enabled, hitting single + double + triple of the same number in one turn wins the game instantly.
 
 **Checkpoint**: Shanghai rule works across all games.
 
@@ -211,9 +211,9 @@
 
 **Exit criterion**: All improvements applied; the project builds and runs end-to-end with no regressions.
 
-- [ ] T045 Run full build verification — `npm run build` passes with no errors or warnings
-- [ ] T046 Run existing test suite — `npm test` passes with no regressions
-- [ ] T047 Provide a brief user-perspective summary of all 11 feedback items addressed: sticky header, prominent miss button, correct dartboard colors, bust dot clearing, Mickey Mouse globally-closed cells, long name truncation, Lumberjack chip accuracy, quick-add removal, history scoreboards, and Shanghai rule.
+- [X] T045 Run full build verification — `npm run build` passes with no errors or warnings
+- [X] T046 Run existing test suite — `npm test` passes with no regressions
+- [X] T047 Provide a brief user-perspective summary of all 11 feedback items addressed: sticky header, prominent miss button, correct dartboard colors, bust dot clearing, Mickey Mouse globally-closed cells, long name truncation, Lumberjack chip accuracy, quick-add removal, history scoreboards, and Shanghai rule.
 
 ---
 

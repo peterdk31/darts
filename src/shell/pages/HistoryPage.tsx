@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { Button } from "@/shared/components/Button";
 import { Modal } from "@/shared/components/Modal";
@@ -147,6 +148,7 @@ export function HistoryPage() {
 }
 
 function HistoryRow({ record }: { record: CompletedGameRecord }) {
+  const [expanded, setExpanded] = useState(false);
   const manifest = getById(record.gameTypeId);
   const winners = record.teams.filter((t) =>
     record.winnerTeamIds.includes(t.id),
@@ -155,6 +157,9 @@ function HistoryRow({ record }: { record: CompletedGameRecord }) {
     manifest?.settingsSchema,
     record.resolvedSettings,
   );
+
+  const ViewPanel = manifest?.view;
+  const hasScoreboard = record.finalEngineState !== undefined && ViewPanel;
 
   return (
     <li className={styles.row}>
@@ -183,6 +188,29 @@ function HistoryRow({ record }: { record: CompletedGameRecord }) {
       </div>
       {settingsSummary && (
         <p className={styles.settings}>{settingsSummary}</p>
+      )}
+      <button
+        type="button"
+        className={styles.expandBtn}
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+      >
+        {expanded ? "Hide scoreboard ▲" : "Show scoreboard ▼"}
+      </button>
+      {expanded && (
+        <div className={styles.detail}>
+          {hasScoreboard ? (
+            ViewPanel({
+              state: record.finalEngineState,
+              resolvedSettings: record.resolvedSettings,
+              teams: record.teams,
+            }) as ReactElement | null
+          ) : (
+            <p className={styles.fallback}>
+              Detailed scoreboard not available for this game.
+            </p>
+          )}
+        </div>
       )}
     </li>
   );

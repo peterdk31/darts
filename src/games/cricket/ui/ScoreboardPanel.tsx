@@ -1,6 +1,7 @@
 import type { ResolvedSettings, ScoreboardHit } from "@/shared/types/game-module";
 import type { Team } from "@/shared/types/core";
 import { getTeamLabel } from "@/shared/teams/teamLabel";
+import { CollapsibleScoreboard, ScoreSummary } from "@/shared/components/CollapsibleScoreboard";
 import { type CricketEngineState, type CricketTarget, CRICKET_TARGETS } from "../engine";
 import styles from "./ScoreboardPanel.module.css";
 
@@ -28,7 +29,17 @@ export function ScoreboardPanel({ state, teams, onScoreboardHit }: Props) {
     state.teams.every((t) => (state.marksByTeam[t.id]?.[String(tg)] ?? 0) >= 3);
 
   return (
-    <div className={styles.panel}>
+    <CollapsibleScoreboard
+      summary={
+        <ScoreSummary
+          teams={teams.map((t) => ({
+            colorId: t.colorId,
+            label: getTeamLabel(t),
+            value: String(state.scoreByTeam[t.id] ?? 0),
+          }))}
+        />
+      }
+    >
       <table className={styles.grid}>
         <thead>
           <tr>
@@ -73,6 +84,6 @@ export function ScoreboardPanel({ state, teams, onScoreboardHit }: Props) {
           })}
         </tbody>
       </table>
-    </div>
+    </CollapsibleScoreboard>
   );
 }

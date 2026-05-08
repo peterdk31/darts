@@ -13,6 +13,7 @@ export interface DartboardThrow {
   cx: number;
   cy: number;
   label: string;
+  intent?: string;
 }
 
 export interface ActiveDot {

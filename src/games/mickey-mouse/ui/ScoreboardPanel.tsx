@@ -1,6 +1,7 @@
 import type { ResolvedSettings, ScoreboardHit } from "@/shared/types/game-module";
 import type { Team } from "@/shared/types/core";
 import { getTeamLabel } from "@/shared/teams/teamLabel";
+import { CollapsibleScoreboard, ScoreSummary } from "@/shared/components/CollapsibleScoreboard";
 import { type MickeyEngineState, type MickeyTarget } from "../engine";
 import styles from "./ScoreboardPanel.module.css";
 
@@ -31,22 +32,27 @@ function hitForTarget(tg: MickeyTarget): ScoreboardHit {
   return { segment: tg, multiplier: 1 };
 }
 
-function settingsChipText(state: MickeyEngineState): string {
-  const parts: string[] = [String(state.startingNumber)];
-  parts.push(state.multipliersScore ? "mult" : "×1");
-  parts.push(state.dtRequireTargetRange ? "+D/T range" : "+D/T any");
-  return parts.join(" · ");
-}
-
 export function ScoreboardPanel({ state, teams, onScoreboardHit }: Props) {
   const currentTeamId = state.turnOrder[state.pointer.teamIdx];
   const currentMarks = state.marksByTeam[currentTeamId!] ?? {};
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.chips}>
-        <span className={styles.chip}>{settingsChipText(state)}</span>
-      </div>
+    <CollapsibleScoreboard
+      summary={
+        <ScoreSummary
+          teams={teams.map((t) => {
+            const closed = state.targets.filter(
+              (tg) => (state.marksByTeam[t.id]?.[String(tg)] ?? 0) >= 3,
+            ).length;
+            return {
+              colorId: t.colorId,
+              label: getTeamLabel(t),
+              value: `${closed}/${state.targets.length}`,
+            };
+          })}
+        />
+      }
+    >
       <table className={styles.grid}>
         <thead>
           <tr>
@@ -92,6 +98,6 @@ export function ScoreboardPanel({ state, teams, onScoreboardHit }: Props) {
           })}
         </tbody>
       </table>
-    </div>
+    </CollapsibleScoreboard>
   );
 }

@@ -4,6 +4,8 @@ import type {
   BoardHints,
   DartSegment,
   InitContext,
+  QuickInputAction,
+  QuickInputGroup,
   ScoreboardSummary,
   ThrowEffect,
 } from "@/shared/types/game-module";
@@ -354,6 +356,12 @@ export function applyThrowLumberjack(
   };
 }
 
+export function getTurnHintLumberjack(state: LumberjackEngineState, _teamId: string): { label: string; value: string } | null {
+  if (state.currentRound >= LUMBERJACK_ROUNDS.length) return null;
+  const round = LUMBERJACK_ROUNDS[state.currentRound]!;
+  return { label: "Aim for", value: round.label };
+}
+
 export function selectScoreboardLumberjack(
   state: LumberjackEngineState,
 ): ScoreboardSummary {
@@ -390,4 +398,64 @@ export function getBoardHintsLumberjack(
     return { highlightTriples: segs };
   }
   return {};
+}
+
+export function getQuickInputsLumberjack(
+  state: LumberjackEngineState,
+): QuickInputGroup[] | null {
+  if (state.status !== "in-progress") return null;
+  if (state.currentRound >= LUMBERJACK_ROUNDS.length) return null;
+  const round = LUMBERJACK_ROUNDS[state.currentRound]!;
+  const miss: QuickInputAction = { label: "Miss", segment: "miss", multiplier: 1, score: 0 };
+
+  if (round.type === "number") {
+    const n = round.target!;
+    return [{
+      label: `Round: ${n}`,
+      actions: [
+        { label: String(n), segment: n, multiplier: 1, score: n },
+        { label: `D${n}`, segment: n, multiplier: 2, score: n * 2 },
+        { label: `T${n}`, segment: n, multiplier: 3, score: n * 3 },
+        miss,
+      ],
+    }];
+  }
+
+  if (round.type === "bull") {
+    return [{
+      label: "Round: Bull",
+      actions: [
+        { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25 },
+        { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 },
+        miss,
+      ],
+    }];
+  }
+
+  if (round.type === "double") {
+    const segs = state.dtAbove15Only ? SEGMENTS_15_PLUS : ALL_SEGMENTS;
+    const actions: QuickInputAction[] = segs.map((s) => ({
+      label: `D${s}`,
+      segment: s as number,
+      multiplier: 2 as const,
+      score: (s as number) * 2,
+    }));
+    actions.push({ label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 });
+    actions.push(miss);
+    return [{ label: "Round: Doubles", actions }];
+  }
+
+  if (round.type === "triple") {
+    const segs = state.dtAbove15Only ? SEGMENTS_15_PLUS : ALL_SEGMENTS;
+    const actions: QuickInputAction[] = segs.map((s) => ({
+      label: `T${s}`,
+      segment: s as number,
+      multiplier: 3 as const,
+      score: (s as number) * 3,
+    }));
+    actions.push(miss);
+    return [{ label: "Round: Triples", actions }];
+  }
+
+  return null;
 }
