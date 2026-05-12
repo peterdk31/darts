@@ -481,15 +481,15 @@ export function PlayPage() {
           ×
         </button>
         <BoardSettingsMenu
-          boardTheme={prefs.boardTheme}
           boardLayout={effectiveLayout}
-          onChangeTheme={(theme) => setPrefs({ ...prefs, boardTheme: theme })}
           onChangeLayout={(layout) => setPrefs({ ...prefs, boardLayout: layout })}
           settingsSchema={manifest.settingsSchema}
           resolvedSettings={game.resolvedSettings}
           hasQuickInputs={hasQuickInputs}
           scoreboardExpanded={scoreboardExpanded}
           onToggleScoreboard={() => setScoreboardExpanded((e) => !e)}
+          appTheme={prefs.appTheme}
+          onChangeAppTheme={(theme) => setPrefs({ ...prefs, appTheme: theme })}
         />
       </div>
 
@@ -545,7 +545,6 @@ export function PlayPage() {
               turnDots={turnDots}
               dotsFading={dotsFading}
               boardHints={boardHints}
-              boardTheme={prefs.boardTheme}
               disabled={bustBanner !== null || pendingIntent !== null || switchOverlay !== null}
               overlay={
                 pendingIntent ? (

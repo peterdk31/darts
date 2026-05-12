@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import type { BoardHints, DartSegment } from "@/shared/types/game-module";
 import type { ThrowSegment } from "@/shared/types/core";
-import type { BoardTheme } from "@/shared/prefs";
 import styles from "./Dartboard.module.css";
 
 export interface DartboardThrow {
@@ -31,7 +30,6 @@ interface Props {
   /** When true, the rendered dots animate to opacity 0 (turn just ended). */
   dotsFading?: boolean;
   boardHints?: BoardHints;
-  boardTheme?: BoardTheme;
   /** When true, taps are ignored (e.g. while bust banner is active or game won). */
   disabled?: boolean;
   /** Content rendered as a centered modal overlay on top of the board. */
@@ -105,7 +103,6 @@ export function Dartboard({
   turnDots = [],
   dotsFading = false,
   boardHints,
-  boardTheme = "traditional",
   disabled = false,
   overlay,
 }: Props) {
@@ -212,7 +209,6 @@ export function Dartboard({
   return (
     <div
       className={styles.wrapper}
-      data-board-theme={boardTheme}
       style={
         {
           "--active-team-color": activeColor ?? "var(--color-accent)",

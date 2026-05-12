@@ -3,7 +3,15 @@
   display: inline-block;
 }
 
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+}
+
 .gear {
+  position: relative;
+  z-index: 50;
   width: 44px;
   height: 44px;
   border-radius: 50%;

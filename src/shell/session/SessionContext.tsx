@@ -15,7 +15,7 @@ import {
   StorageUnsupportedError,
   type StorageNamespace,
 } from "@/shared/storage";
-import { loadPrefs, savePrefs, type UserPrefs } from "@/shared/prefs";
+import { applyAppTheme, loadPrefs, savePrefs, type UserPrefs } from "@/shared/prefs";
 import { QuotaExceededModal } from "@/shared/components/QuotaExceededModal";
 import {
   initialSessionState,
@@ -74,7 +74,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     initialData.restore?.state ?? initialSessionState,
   );
   const [hydrated, setHydrated] = useState(initialData.restore !== null);
-  const [prefs, setPrefsState] = useState<UserPrefs>(() => loadPrefs());
+  const [prefs, setPrefsState] = useState<UserPrefs>(() => {
+    const p = loadPrefs();
+    applyAppTheme(p.appTheme);
+    return p;
+  });
   const [quotaError, setQuotaError] = useState<{ namespace: StorageNamespace } | null>(null);
   const prevState = useRef<SessionState | null>(
     initialData.restore?.state ?? null,
@@ -173,6 +177,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const setPrefs = useCallback((next: UserPrefs) => {
     setPrefsState(next);
+    applyAppTheme(next.appTheme);
     try {
       savePrefs({ ...next });
     } catch (err) {

@@ -153,20 +153,6 @@
   z-index: 10;
 }
 
-/* Desaturated theme overrides */
-.wrapper[data-board-theme="desaturated"] {
-  --board-miss-bg: #1f2429;
-  --board-ring-outer: #14181c;
-  --board-segment-light: #cbb988;
-  --board-segment-dark: #2a2f35;
-  --board-double-light: #8b3939;
-  --board-double-dark: #2f5f3a;
-  --board-triple-light: #8b3939;
-  --board-triple-dark: #2f5f3a;
-  --board-bull-outer: #2f5f3a;
-  --board-bull-inner: #8b3939;
-  --board-number-fg: #e5e7eb;
-}
 
 @container (min-width: 700px) {
   .wrapper {

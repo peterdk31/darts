@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import type { BoardLayout, BoardTheme } from "@/shared/prefs";
+import type { AppTheme, BoardLayout } from "@/shared/prefs";
 import type { SettingDefinition, ResolvedSettings } from "@/shared/types/game-module";
 import styles from "./BoardSettingsMenu.module.css";
 
 interface Props {
-  boardTheme: BoardTheme;
   boardLayout: BoardLayout;
-  onChangeTheme: (theme: BoardTheme) => void;
   onChangeLayout: (layout: BoardLayout) => void;
   settingsSchema?: ReadonlyArray<SettingDefinition>;
   resolvedSettings?: ResolvedSettings;
   hasQuickInputs?: boolean;
   scoreboardExpanded?: boolean;
   onToggleScoreboard?: () => void;
+  appTheme?: AppTheme;
+  onChangeAppTheme?: (theme: AppTheme) => void;
 }
 
 function formatValue(def: SettingDefinition, v: boolean | number | string): string {
@@ -24,39 +24,39 @@ function formatValue(def: SettingDefinition, v: boolean | number | string): stri
 }
 
 export function BoardSettingsMenu({
-  boardTheme,
   boardLayout,
-  onChangeTheme,
   onChangeLayout,
   settingsSchema,
   resolvedSettings,
   hasQuickInputs,
   scoreboardExpanded,
   onToggleScoreboard,
+  appTheme,
+  onChangeAppTheme,
 }: Props) {
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (popRef.current && !popRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
 
   return (
     <div className={styles.wrap} ref={popRef}>
+      {open && (
+        <div
+          className={styles.backdrop}
+          onClick={() => setOpen(false)}
+          onTouchEnd={(e) => { e.preventDefault(); setOpen(false); }}
+        />
+      )}
       <button
         type="button"
         className={styles.gear}
@@ -85,22 +85,6 @@ export function BoardSettingsMenu({
               </label>
             )}
           </div>
-
-          {boardLayout === "classic" && (
-            <>
-              <div className={`${styles.title} ${styles.titleSeparated}`}>Theme</div>
-              <div className={styles.segmented}>
-                <label className={`${styles.seg} ${boardTheme === "traditional" ? styles.segActive : ""}`}>
-                  <input type="radio" name="board-theme" value="traditional" checked={boardTheme === "traditional"} onChange={() => onChangeTheme("traditional")} />
-                  Traditional
-                </label>
-                <label className={`${styles.seg} ${boardTheme === "desaturated" ? styles.segActive : ""}`}>
-                  <input type="radio" name="board-theme" value="desaturated" checked={boardTheme === "desaturated"} onChange={() => onChangeTheme("desaturated")} />
-                  Desaturated
-                </label>
-              </div>
-            </>
-          )}
 
           {onToggleScoreboard && (
             <>
@@ -138,6 +122,26 @@ export function BoardSettingsMenu({
                   </div>
                 );
               })}
+            </>
+          )}
+
+          {onChangeAppTheme && appTheme && (
+            <>
+              <div className={`${styles.title} ${styles.titleSeparated}`}>Theme</div>
+              <div className={styles.segmented}>
+                <label className={`${styles.seg} ${appTheme === "system" ? styles.segActive : ""}`}>
+                  <input type="radio" name="app-theme" value="system" checked={appTheme === "system"} onChange={() => onChangeAppTheme("system")} />
+                  Auto
+                </label>
+                <label className={`${styles.seg} ${appTheme === "light" ? styles.segActive : ""}`}>
+                  <input type="radio" name="app-theme" value="light" checked={appTheme === "light"} onChange={() => onChangeAppTheme("light")} />
+                  Light
+                </label>
+                <label className={`${styles.seg} ${appTheme === "dark" ? styles.segActive : ""}`}>
+                  <input type="radio" name="app-theme" value="dark" checked={appTheme === "dark"} onChange={() => onChangeAppTheme("dark")} />
+                  Dark
+                </label>
+              </div>
             </>
           )}
         </div>
