@@ -7,7 +7,7 @@ import { BustBanner } from "@/shell/components/BustBanner";
 import { PlayerSwitchOverlay } from "@/shell/components/PlayerSwitchOverlay";
 import { BoardSettingsMenu } from "@/shell/components/BoardSettingsMenu";
 import { AbandonConfirmModal } from "@/shell/components/AbandonConfirmModal";
-import { IntentChooser } from "@/games/mickey-mouse/ui/IntentChooser";
+import { IntentChooser } from "@/shell/IntentChooser";
 import { Button } from "@/shared/components/Button";
 import { useNavigate } from "@/shared/routing/router";
 import { useSession } from "@/shell/session/useSession";
