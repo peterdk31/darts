@@ -4,6 +4,7 @@ import { cricketManifest } from "./cricket/manifest";
 import { aroundTheClockManifest } from "./around-the-clock/manifest";
 import { mickeyMouseManifest } from "./mickey-mouse/manifest";
 import { lumberjackManifest } from "./lumberjack/manifest";
+import { killerManifest } from "./killer/manifest";
 
 // Manifests have game-specific EngineState; the registry treats them opaquely.
 // We widen to GameManifest<any> at the boundary because TS function-arg
@@ -16,6 +17,7 @@ const MANIFESTS: AnyManifest[] = [
   aroundTheClockManifest,
   mickeyMouseManifest,
   lumberjackManifest,
+  killerManifest,
 ];
 
 export function getById(id: string): AnyManifest | undefined {
