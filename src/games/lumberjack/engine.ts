@@ -406,12 +406,13 @@ export function getQuickInputsLumberjack(
   if (state.status !== "in-progress") return null;
   if (state.currentRound >= LUMBERJACK_ROUNDS.length) return null;
   const round = LUMBERJACK_ROUNDS[state.currentRound]!;
-  const miss: QuickInputAction = { label: "Miss", segment: "miss", multiplier: 1, score: 0 };
+  const miss: QuickInputAction = { label: "Miss", segment: "miss", multiplier: 1, score: 0, variant: "miss" };
+  const roundLabel = `Round ${state.currentRound + 1}/${LUMBERJACK_ROUNDS.length}: ${round.label}`;
 
   if (round.type === "number") {
     const n = round.target!;
     return [{
-      label: `Round: ${n}`,
+      label: roundLabel,
       actions: [
         { label: String(n), segment: n, multiplier: 1, score: n },
         { label: `D${n}`, segment: n, multiplier: 2, score: n * 2 },
@@ -423,7 +424,7 @@ export function getQuickInputsLumberjack(
 
   if (round.type === "bull") {
     return [{
-      label: "Round: Bull",
+      label: roundLabel,
       actions: [
         { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25 },
         { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 },
@@ -434,27 +435,75 @@ export function getQuickInputsLumberjack(
 
   if (round.type === "double") {
     const segs = state.dtAbove15Only ? SEGMENTS_15_PLUS : ALL_SEGMENTS;
-    const actions: QuickInputAction[] = segs.map((s) => ({
-      label: `D${s}`,
-      segment: s as number,
-      multiplier: 2 as const,
-      score: (s as number) * 2,
+    const groups: QuickInputGroup[] = [];
+    const high = segs.filter((s) => (s as number) >= 15);
+    const low = segs.filter((s) => (s as number) < 15);
+
+    const highActions: QuickInputAction[] = high.map((s) => ({
+      label: `D${s}`, segment: s as number, multiplier: 2 as const, score: (s as number) * 2,
     }));
-    actions.push({ label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 });
-    actions.push(miss);
-    return [{ label: "Round: Doubles", actions }];
+    highActions.push({ label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 });
+    groups.push({ label: roundLabel, actions: highActions });
+
+    if (low.length > 0) {
+      groups.push({
+        label: "More doubles",
+        actions: low.map((s) => ({
+          label: `D${s}`, segment: s as number, multiplier: 2 as const, score: (s as number) * 2,
+        })),
+      });
+    }
+
+    groups.push({ actions: [miss] });
+    return groups;
   }
 
   if (round.type === "triple") {
     const segs = state.dtAbove15Only ? SEGMENTS_15_PLUS : ALL_SEGMENTS;
-    const actions: QuickInputAction[] = segs.map((s) => ({
-      label: `T${s}`,
-      segment: s as number,
-      multiplier: 3 as const,
-      score: (s as number) * 3,
-    }));
-    actions.push(miss);
-    return [{ label: "Round: Triples", actions }];
+    const groups: QuickInputGroup[] = [];
+    const high = segs.filter((s) => (s as number) >= 15);
+    const low = segs.filter((s) => (s as number) < 15);
+
+    groups.push({
+      label: roundLabel,
+      actions: high.map((s) => ({
+        label: `T${s}`, segment: s as number, multiplier: 3 as const, score: (s as number) * 3,
+      })),
+    });
+
+    if (low.length > 0) {
+      groups.push({
+        label: "More triples",
+        actions: low.map((s) => ({
+          label: `T${s}`, segment: s as number, multiplier: 3 as const, score: (s as number) * 3,
+        })),
+      });
+    }
+
+    groups.push({ actions: [miss] });
+    return groups;
+  }
+
+  if (round.type === "exact41") {
+    const teamId = state.turnOrder[state.pointer.teamIdx] ?? "";
+    const chanceTotal = state.r41ChanceTotal[teamId] ?? 0;
+    const dartsInChance = state.r41DartsInChance[teamId] ?? 0;
+    const remaining = 41 - chanceTotal;
+    const chanceLabel = dartsInChance > 0
+      ? `${roundLabel}  (need ${remaining} in ${3 - dartsInChance})`
+      : roundLabel;
+
+    return [{
+      label: chanceLabel,
+      actions: [
+        ...ALL_SEGMENTS.map((s) => ({
+          label: String(s), segment: s as number, multiplier: 1 as const, score: s as number,
+        })),
+        { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25 },
+        { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 },
+        miss,
+      ],
+    }];
   }
 
   return null;

@@ -163,25 +163,24 @@ export function getQuickInputsATC(state: ATCEngineState): QuickInputGroup[] | nu
   if (state.status !== "in-progress") return null;
   const teamId = state.turnOrder[state.pointer.teamIdx] ?? "";
   const p = state.progressByTeam[teamId] ?? 0;
-
   if (p < 20) {
     const n = p + 1;
     return [{
-      label: `Target: ${n}`,
+      label: `Target: ${n}  (${p}/${ATC_TARGETS_COUNT})`,
       actions: [
         { label: String(n), segment: n, multiplier: 1, score: n },
         { label: `D${n}`, segment: n, multiplier: 2, score: n * 2 },
         { label: `T${n}`, segment: n, multiplier: 3, score: n * 3 },
-        { label: "Miss", segment: "miss", multiplier: 1, score: 0 },
+        { label: "Miss", segment: "miss", multiplier: 1, score: 0, variant: "miss" },
       ],
     }];
   }
   return [{
-    label: "Target: Bull",
+    label: `Target: Bull  (${p}/${ATC_TARGETS_COUNT})`,
     actions: [
       { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25 },
       { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 },
-      { label: "Miss", segment: "miss", multiplier: 1, score: 0 },
+      { label: "Miss", segment: "miss", multiplier: 1, score: 0, variant: "miss" },
     ],
   }];
 }

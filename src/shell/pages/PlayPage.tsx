@@ -481,7 +481,7 @@ export function PlayPage() {
         </button>
         <BoardSettingsMenu
           boardTheme={prefs.boardTheme}
-          boardLayout={prefs.boardLayout}
+          boardLayout={effectiveLayout}
           onChangeTheme={(theme) => setPrefs({ ...prefs, boardTheme: theme })}
           onChangeLayout={(layout) => setPrefs({ ...prefs, boardLayout: layout })}
           settingsSchema={manifest.settingsSchema}

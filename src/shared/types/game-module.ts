@@ -88,6 +88,8 @@ export interface QuickInputAction {
   multiplier: 1 | 2 | 3;
   score: number;
   intent?: string;
+  variant?: "meta" | "miss";
+  marks?: { current: number; max: number };
 }
 
 export interface QuickInputGroup {

@@ -246,6 +246,9 @@ export function getQuickInputsCricket(
   state: CricketEngineState,
 ): QuickInputGroup[] | null {
   if (state.status !== "in-progress") return null;
+  const teamId = state.turnOrder[state.pointer.teamIdx] ?? "";
+  const teamMarks = state.marksByTeam[teamId] ?? {};
+  const cur = (key: string) => Math.min(teamMarks[key] ?? 0, 3);
   const groups: QuickInputGroup[] = [];
 
   for (const tg of CRICKET_TARGETS) {
@@ -254,25 +257,25 @@ export function getQuickInputsCricket(
     );
     if (allClosed) continue;
 
+    const m = { current: cur(String(tg)), max: 3 };
     if (tg === "bull") {
       groups.push({
-        label: "Bull",
         actions: [
-          { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25 },
-          { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 },
+          { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25, marks: m },
+          { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50, marks: m },
         ],
       });
     } else {
       groups.push({
         actions: [
-          { label: String(tg), segment: tg, multiplier: 1, score: tg },
-          { label: `D${tg}`, segment: tg, multiplier: 2, score: tg * 2 },
-          { label: `T${tg}`, segment: tg, multiplier: 3, score: tg * 3 },
+          { label: String(tg), segment: tg, multiplier: 1, score: tg, marks: m },
+          { label: `D${tg}`, segment: tg, multiplier: 2, score: tg * 2, marks: m },
+          { label: `T${tg}`, segment: tg, multiplier: 3, score: tg * 3, marks: m },
         ],
       });
     }
   }
 
-  groups.push({ actions: [{ label: "Miss", segment: "miss", multiplier: 1, score: 0 }] });
+  groups.push({ actions: [{ label: "Miss", segment: "miss", multiplier: 1, score: 0, variant: "miss" }] });
   return groups;
 }

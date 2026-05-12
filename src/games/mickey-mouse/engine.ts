@@ -302,50 +302,55 @@ export function getQuickInputsMickey(
 ): QuickInputGroup[] | null {
   if (state.status !== "in-progress") return null;
   const teamId = state.turnOrder[state.pointer.teamIdx] ?? "";
-  const marks = state.marksByTeam[teamId] ?? {};
-  const open = (key: string) => (marks[key] ?? 0) < 3;
+  const teamMarks = state.marksByTeam[teamId] ?? {};
+  const cur = (key: string) => Math.min(teamMarks[key] ?? 0, 3);
+  const open = (key: string) => cur(key) < 3;
   const groups: QuickInputGroup[] = [];
 
   for (const tg of state.targets) {
     if (typeof tg !== "number" || !open(String(tg))) continue;
-    groups.push({
-      actions: [
-        { label: String(tg), segment: tg, multiplier: 1, score: tg, intent: "number" },
-        { label: `D${tg}`, segment: tg, multiplier: 2, score: tg * 2, intent: "number" },
-        { label: `T${tg}`, segment: tg, multiplier: 3, score: tg * 3, intent: "number" },
-      ],
-    });
+    const m = { current: cur(String(tg)), max: 3 };
+    const actions: QuickInputAction[] = [
+      { label: String(tg), segment: tg, multiplier: 1, score: tg, intent: "number", marks: m },
+    ];
+    if (state.multipliersScore) {
+      actions.push(
+        { label: `D${tg}`, segment: tg, multiplier: 2, score: tg * 2, intent: "number", marks: m },
+        { label: `T${tg}`, segment: tg, multiplier: 3, score: tg * 3, intent: "number", marks: m },
+      );
+    }
+    groups.push({ actions });
   }
 
+  const metaActions: QuickInputAction[] = [];
   if (open("double")) {
-    const actions: QuickInputAction[] = [
-      { label: "D20", segment: 20, multiplier: 2, score: 40, intent: "double" },
-      { label: "D18", segment: 18, multiplier: 2, score: 36, intent: "double" },
-      { label: "D16", segment: 16, multiplier: 2, score: 32, intent: "double" },
-      { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50, intent: "double" },
-    ];
-    groups.push({ label: "Double", actions });
-  }
-
-  if (open("triple")) {
-    const actions: QuickInputAction[] = [
-      { label: "T20", segment: 20, multiplier: 3, score: 60, intent: "triple" },
-      { label: "T19", segment: 19, multiplier: 3, score: 57, intent: "triple" },
-      { label: "T18", segment: 18, multiplier: 3, score: 54, intent: "triple" },
-    ];
-    groups.push({ label: "Triple", actions });
-  }
-
-  if (open("bull")) {
-    groups.push({
-      label: "Bull",
-      actions: [
-        { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25, intent: "bull" },
-        { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50, intent: "bull" },
-      ],
+    metaActions.push({
+      label: "Double", segment: 20, multiplier: 2, score: 40,
+      intent: "double", variant: "meta", marks: { current: cur("double"), max: 3 },
     });
   }
+  if (open("triple")) {
+    metaActions.push({
+      label: "Triple", segment: 20, multiplier: 3, score: 60,
+      intent: "triple", variant: "meta", marks: { current: cur("triple"), max: 3 },
+    });
+  }
+  if (open("bull")) {
+    metaActions.push({
+      label: "Bull", segment: "outer-bull", multiplier: 1, score: 25,
+      intent: "bull", variant: "meta", marks: { current: cur("bull"), max: 3 },
+    });
+    if (state.multipliersScore) {
+      metaActions.push({
+        label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50,
+        intent: "bull", variant: "meta", marks: { current: cur("bull"), max: 3 },
+      });
+    }
+  }
+  if (metaActions.length > 0) {
+    groups.push({ actions: metaActions });
+  }
 
-  groups.push({ actions: [{ label: "Miss", segment: "miss", multiplier: 1, score: 0 }] });
+  groups.push({ actions: [{ label: "Miss", segment: "miss", multiplier: 1, score: 0, variant: "miss" }] });
   return groups;
 }

@@ -36,6 +36,13 @@ export function QuickBoard({ groups, onThrow, disabled = false }: Props) {
     });
   }
 
+  function btnClass(action: QuickInputAction): string {
+    const classes = [styles.btn];
+    if (action.variant === "meta") classes.push(styles.metaBtn!);
+    else if (action.variant === "miss" || action.segment === "miss") classes.push(styles.missBtn!);
+    return classes.filter(Boolean).join(" ");
+  }
+
   return (
     <div className={styles.wrapper}>
       <div className={`${styles.container} ${disabled ? styles.disabled : ""}`}>
@@ -47,11 +54,17 @@ export function QuickBoard({ groups, onThrow, disabled = false }: Props) {
                 <button
                   key={ai}
                   type="button"
-                  className={`${styles.btn} ${action.segment === "miss" ? styles.missBtn : ""}`}
+                  className={btnClass(action)}
                   onClick={() => handleClick(action)}
                   disabled={disabled}
                 >
-                  {action.label}
+                  <span>{action.label}</span>
+                  {action.marks && (
+                    <span className={styles.marks}>
+                      {"●".repeat(action.marks.current)}
+                      {"○".repeat(action.marks.max - action.marks.current)}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
