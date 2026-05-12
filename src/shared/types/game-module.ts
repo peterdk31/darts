@@ -118,6 +118,7 @@ export interface GameManifest<EngineState = unknown> {
     resolvedSettings: ResolvedSettings;
     teams: ReadonlyArray<Team>;
     onScoreboardHit?: (hit: ScoreboardHit) => void;
+    scoreboardExpanded?: boolean;
   }) => ReactNode;
   getTurnHint(state: EngineState, teamId: string): { label: string; value: string } | null;
   getBoardHints(state: EngineState): BoardHints;

@@ -11,6 +11,8 @@ interface Props {
   settingsSchema?: ReadonlyArray<SettingDefinition>;
   resolvedSettings?: ResolvedSettings;
   hasQuickInputs?: boolean;
+  scoreboardExpanded?: boolean;
+  onToggleScoreboard?: () => void;
 }
 
 function formatValue(def: SettingDefinition, v: boolean | number | string): string {
@@ -29,6 +31,8 @@ export function BoardSettingsMenu({
   settingsSchema,
   resolvedSettings,
   hasQuickInputs,
+  scoreboardExpanded,
+  onToggleScoreboard,
 }: Props) {
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement | null>(null);
@@ -95,6 +99,22 @@ export function BoardSettingsMenu({
                   Desaturated
                 </label>
               </div>
+            </>
+          )}
+
+          {onToggleScoreboard && (
+            <>
+              <div className={`${styles.title} ${styles.titleSeparated}`}>Scoreboard</div>
+              <button
+                type="button"
+                className={styles.switchRow}
+                onClick={onToggleScoreboard}
+              >
+                <span>Show details</span>
+                <span className={`${styles.switchTrack} ${scoreboardExpanded ? styles.switchOn : ""}`}>
+                  <span className={styles.switchThumb} />
+                </span>
+              </button>
             </>
           )}
 

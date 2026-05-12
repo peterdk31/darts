@@ -1,25 +1,17 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import styles from "./CollapsibleScoreboard.module.css";
 
 interface Props {
   summary: ReactNode;
   children: ReactNode;
+  expanded?: boolean;
 }
 
-export function CollapsibleScoreboard({ summary, children }: Props) {
-  const [expanded, setExpanded] = useState(false);
-
+export function CollapsibleScoreboard({ summary, children, expanded = true }: Props) {
   return (
     <div className={styles.wrapper} data-expanded={expanded || undefined}>
       <div className={styles.summary}>{summary}</div>
       <div className={styles.details}>{children}</div>
-      <button
-        type="button"
-        className={styles.toggle}
-        onClick={() => setExpanded((e) => !e)}
-      >
-        {expanded ? "▴ Hide details" : "▾ Show details"}
-      </button>
     </div>
   );
 }

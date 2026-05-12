@@ -10,6 +10,7 @@ interface Props {
   resolvedSettings: ResolvedSettings;
   teams: ReadonlyArray<Team>;
   onScoreboardHit?: (hit: ScoreboardHit) => void;
+  scoreboardExpanded?: boolean;
 }
 
 function marksGlyph(n: number): string {
@@ -24,12 +25,13 @@ function hitForTarget(tg: CricketTarget): ScoreboardHit {
   return { segment: tg, multiplier: 1 };
 }
 
-export function ScoreboardPanel({ state, teams, onScoreboardHit }: Props) {
+export function ScoreboardPanel({ state, teams, onScoreboardHit, scoreboardExpanded }: Props) {
   const allClosed = (tg: CricketTarget) =>
     state.teams.every((t) => (state.marksByTeam[t.id]?.[String(tg)] ?? 0) >= 3);
 
   return (
     <CollapsibleScoreboard
+      expanded={scoreboardExpanded}
       summary={
         <ScoreSummary
           teams={teams.map((t) => ({

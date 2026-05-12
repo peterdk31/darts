@@ -5,6 +5,7 @@ import { CollapsibleScoreboard, ScoreSummary } from "@/shared/components/Collaps
 import {
   LUMBERJACK_ROUNDS,
   type LumberjackEngineState,
+  type LumberjackRound,
 } from "../engine";
 import styles from "./ScoreboardPanel.module.css";
 
@@ -12,10 +13,16 @@ interface Props {
   state: LumberjackEngineState;
   resolvedSettings: ResolvedSettings;
   teams: ReadonlyArray<Team>;
+  scoreboardExpanded?: boolean;
+}
+
+function getScoreboardRounds(state: LumberjackEngineState): readonly LumberjackRound[] {
+  return state.reverseOrder ? [...LUMBERJACK_ROUNDS].reverse() : LUMBERJACK_ROUNDS;
 }
 
 function renderCell(
   state: LumberjackEngineState,
+  rounds: readonly LumberjackRound[],
   teamId: string,
   roundIdx: number,
 ): string {
@@ -29,7 +36,7 @@ function renderCell(
   }
 
   if (roundIdx === state.currentRound) {
-    const round = LUMBERJACK_ROUNDS[roundIdx]!;
+    const round = rounds[roundIdx]!;
     const currentTeamId = state.turnOrder[state.pointer.teamIdx];
     if (teamId === currentTeamId) {
       if (round.type === "exact41") {
@@ -49,9 +56,11 @@ function renderCell(
   return "";
 }
 
-export function ScoreboardPanel({ state, teams }: Props) {
+export function ScoreboardPanel({ state, teams, scoreboardExpanded }: Props) {
+  const rounds = getScoreboardRounds(state);
   return (
     <CollapsibleScoreboard
+      expanded={scoreboardExpanded}
       summary={
         <ScoreSummary
           teams={teams.map((t) => ({
@@ -78,7 +87,7 @@ export function ScoreboardPanel({ state, teams }: Props) {
           </tr>
         </thead>
         <tbody>
-          {LUMBERJACK_ROUNDS.map((round, i) => {
+          {rounds.map((round, i) => {
             const isActive = i === state.currentRound;
             const isFuture = i > state.currentRound;
             let rowClass = "";
@@ -90,7 +99,7 @@ export function ScoreboardPanel({ state, teams }: Props) {
                   {round.label}
                 </th>
                 {teams.map((t) => {
-                  const text = renderCell(state, t.id, i);
+                  const text = renderCell(state, rounds, t.id, i);
                   const isHalved = text === "½";
                   return (
                     <td

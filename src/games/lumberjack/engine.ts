@@ -50,6 +50,7 @@ export interface LumberjackEngineState {
   roundHitByTeam: Record<string, boolean>;
   roundPointsByTeam: Record<string, number>;
   dtAbove15Only: boolean;
+  reverseOrder: boolean;
   roundLog: Record<string, RoundLogEntry[]>;
   /** Round 7 (exact-41): darts thrown in the current 3-dart chance (0-2). */
   r41DartsInChance: Record<string, number>;
@@ -60,6 +61,10 @@ export interface LumberjackEngineState {
   pointer: TurnPointer;
   status: "in-progress" | "won";
   winnerTeamIds: string[] | null;
+}
+
+function getRounds(state: LumberjackEngineState): readonly LumberjackRound[] {
+  return state.reverseOrder ? [...LUMBERJACK_ROUNDS].reverse() : LUMBERJACK_ROUNDS;
 }
 
 export function computeRoundPoints(
@@ -135,6 +140,7 @@ export function initLumberjack(ctx: InitContext): LumberjackEngineState {
     r41HitCount[t.id] = 0;
   }
   const dtAbove15Only = ctx.resolvedSettings["dtAbove15Only"] === true;
+  const reverseOrder = ctx.resolvedSettings["reverseOrder"] === true;
   return {
     teams,
     turnOrder,
@@ -145,6 +151,7 @@ export function initLumberjack(ctx: InitContext): LumberjackEngineState {
     roundHitByTeam,
     roundPointsByTeam,
     dtAbove15Only,
+    reverseOrder,
     roundLog,
     r41DartsInChance,
     r41ChanceTotal,
@@ -161,7 +168,8 @@ export function applyThrowLumberjack(
 ): ApplyThrowResult<LumberjackEngineState> {
   if (state.status === "won") return { state, effects: [] };
 
-  const round = LUMBERJACK_ROUNDS[state.currentRound];
+  const rounds = getRounds(state);
+  const round = rounds[state.currentRound];
   if (!round) return { state, effects: [] };
 
   const teamId = state.turnOrder[state.pointer.teamIdx]!;
@@ -297,7 +305,7 @@ export function applyThrowLumberjack(
       }
     }
 
-    if (nextCurrentRound >= LUMBERJACK_ROUNDS.length) {
+    if (nextCurrentRound >= rounds.length) {
       let maxScore = -1;
       for (const t of state.teams) {
         const score = nextScoreByTeam[t.id] ?? 0;
@@ -357,8 +365,9 @@ export function applyThrowLumberjack(
 }
 
 export function getTurnHintLumberjack(state: LumberjackEngineState, _teamId: string): { label: string; value: string } | null {
-  if (state.currentRound >= LUMBERJACK_ROUNDS.length) return null;
-  const round = LUMBERJACK_ROUNDS[state.currentRound]!;
+  const rounds = getRounds(state);
+  if (state.currentRound >= rounds.length) return null;
+  const round = rounds[state.currentRound]!;
   return { label: "Aim for", value: round.label };
 }
 
@@ -381,8 +390,9 @@ const SEGMENTS_15_PLUS: DartSegment[] = [15, 16, 17, 18, 19, 20];
 export function getBoardHintsLumberjack(
   state: LumberjackEngineState,
 ): BoardHints {
-  if (state.currentRound >= LUMBERJACK_ROUNDS.length) return {};
-  const round = LUMBERJACK_ROUNDS[state.currentRound]!;
+  const rounds = getRounds(state);
+  if (state.currentRound >= rounds.length) return {};
+  const round = rounds[state.currentRound]!;
   if (round.type === "number") {
     return { highlight: [round.target as DartSegment] };
   }
@@ -404,10 +414,11 @@ export function getQuickInputsLumberjack(
   state: LumberjackEngineState,
 ): QuickInputGroup[] | null {
   if (state.status !== "in-progress") return null;
-  if (state.currentRound >= LUMBERJACK_ROUNDS.length) return null;
-  const round = LUMBERJACK_ROUNDS[state.currentRound]!;
+  const rounds = getRounds(state);
+  if (state.currentRound >= rounds.length) return null;
+  const round = rounds[state.currentRound]!;
   const miss: QuickInputAction = { label: "Miss", segment: "miss", multiplier: 1, score: 0, variant: "miss" };
-  const roundLabel = `Round ${state.currentRound + 1}/${LUMBERJACK_ROUNDS.length}: ${round.label}`;
+  const roundLabel = `Round ${state.currentRound + 1}/${rounds.length}: ${round.label}`;
 
   if (round.type === "number") {
     const n = round.target!;

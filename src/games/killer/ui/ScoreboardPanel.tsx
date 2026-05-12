@@ -17,11 +17,13 @@ interface Props {
   state: KillerEngineState;
   resolvedSettings: ResolvedSettings;
   teams: ReadonlyArray<Team>;
+  scoreboardExpanded?: boolean;
 }
 
-export function ScoreboardPanel({ state, teams }: Props) {
+export function ScoreboardPanel({ state, teams, scoreboardExpanded }: Props) {
   return (
     <CollapsibleScoreboard
+      expanded={scoreboardExpanded}
       summary={
         <ScoreSummary
           teams={teams.map((t) => {

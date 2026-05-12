@@ -57,6 +57,7 @@ export function PlayPage() {
   } | null>(null);
   const [turnDots, setTurnDots] = useState<ActiveDot[]>([]);
   const [dotsFading, setDotsFading] = useState(false);
+  const [scoreboardExpanded, setScoreboardExpanded] = useState(true);
   const fadeTimerRef = useRef<number | null>(null);
   const prevDartsCountRef = useRef<number>(game?.currentTurn.dartsThrownThisTurn ?? 0);
   // Parallel to game.throws / game.redoStack, holds the tap coords for each
@@ -487,6 +488,8 @@ export function PlayPage() {
           settingsSchema={manifest.settingsSchema}
           resolvedSettings={game.resolvedSettings}
           hasQuickInputs={hasQuickInputs}
+          scoreboardExpanded={scoreboardExpanded}
+          onToggleScoreboard={() => setScoreboardExpanded((e) => !e)}
         />
       </div>
 
@@ -498,6 +501,7 @@ export function PlayPage() {
               resolvedSettings: game.resolvedSettings,
               teams: game.teams,
               onScoreboardHit: bustBanner || pendingIntent || switchOverlay ? undefined : handleScoreboardHit,
+              scoreboardExpanded,
             }) as ReactElement | null)
           ) : (
             <DefaultScoreboard rows={scoreboard.rows} game={game} />

@@ -532,6 +532,16 @@ export function getQuickInputsKiller(
       actions: segmentActions(ownNum, state.targets),
     });
   } else {
+    const currentLives = state.lives[teamId] ?? 0;
+    const canGainLives =
+      state.maxLives === 0 || currentLives < state.maxLives;
+    if (canGainLives) {
+      groups.push({
+        label: "Gain lives",
+        actions: segmentActions(ownNum, state.targets),
+      });
+    }
+
     for (const t of state.teams) {
       if (t.id === teamId || state.eliminatedTeamIds.includes(t.id)) continue;
       const num = state.assignments[t.id]!;

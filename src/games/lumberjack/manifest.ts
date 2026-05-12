@@ -18,6 +18,12 @@ const settings: SettingDefinition[] = [
     type: "toggle",
     default: false,
   },
+  {
+    key: "reverseOrder",
+    label: "Reverse round order",
+    type: "toggle",
+    default: false,
+  },
   shanghaiSetting,
 ];
 

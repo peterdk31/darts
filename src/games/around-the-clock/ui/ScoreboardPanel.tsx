@@ -9,6 +9,7 @@ interface Props {
   state: ATCEngineState;
   resolvedSettings: ResolvedSettings;
   teams: ReadonlyArray<Team>;
+  scoreboardExpanded?: boolean;
 }
 
 const ATC_LABELS: string[] = [
@@ -16,9 +17,10 @@ const ATC_LABELS: string[] = [
   "Bull",
 ];
 
-export function ScoreboardPanel({ state, teams }: Props) {
+export function ScoreboardPanel({ state, teams, scoreboardExpanded }: Props) {
   return (
     <CollapsibleScoreboard
+      expanded={scoreboardExpanded}
       summary={
         <ScoreSummary
           teams={teams.map((t) => {

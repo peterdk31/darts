@@ -8,12 +8,8 @@
   padding: var(--space-2);
 }
 
-/* Desktop: show details, hide summary + toggle */
+/* Desktop: show details, hide summary */
 .summary {
-  display: none;
-}
-
-.toggle {
   display: none;
 }
 
@@ -58,17 +54,12 @@
     display: none;
   }
 
-  .toggle {
+  .wrapper:not([data-expanded]) .summary {
     display: block;
-    background: none;
-    border: none;
-    color: var(--color-fg-muted);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    cursor: pointer;
-    padding: var(--space-1) 0;
-    text-align: center;
-    width: 100%;
+  }
+
+  .wrapper:not([data-expanded]) .details {
+    display: none;
   }
 
   .wrapper[data-expanded] .summary {

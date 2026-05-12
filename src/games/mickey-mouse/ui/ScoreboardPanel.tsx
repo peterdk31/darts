@@ -10,6 +10,7 @@ interface Props {
   resolvedSettings: ResolvedSettings;
   teams: ReadonlyArray<Team>;
   onScoreboardHit?: (hit: ScoreboardHit) => void;
+  scoreboardExpanded?: boolean;
 }
 
 function targetLabel(tg: number | string): string {
@@ -32,12 +33,13 @@ function hitForTarget(tg: MickeyTarget): ScoreboardHit {
   return { segment: tg, multiplier: 1 };
 }
 
-export function ScoreboardPanel({ state, teams, onScoreboardHit }: Props) {
+export function ScoreboardPanel({ state, teams, onScoreboardHit, scoreboardExpanded }: Props) {
   const currentTeamId = state.turnOrder[state.pointer.teamIdx];
   const currentMarks = state.marksByTeam[currentTeamId!] ?? {};
 
   return (
     <CollapsibleScoreboard
+      expanded={scoreboardExpanded}
       summary={
         <ScoreSummary
           teams={teams.map((t) => {
