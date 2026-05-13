@@ -778,7 +778,7 @@ describe("Lumberjack engine", () => {
     it("highlights number target for number rounds", () => {
       const s = initLumberjack(ctx(makeTeams()));
       expect(s.currentRound).toBe(0);
-      expect(getBoardHintsLumberjack(s)).toEqual({ highlight: [15] });
+      expect(getBoardHintsLumberjack(s)).toEqual({ highlights: [{ segments: [15] }] });
     });
 
     it("highlights bull for bull round", () => {
@@ -795,7 +795,7 @@ describe("Lumberjack engine", () => {
         }
       }
       expect(s.currentRound).toBe(9);
-      expect(getBoardHintsLumberjack(s)).toEqual({ highlight: ["bull"] });
+      expect(getBoardHintsLumberjack(s)).toEqual({ highlights: [{ segments: ["bull"] }] });
     });
 
     it("highlights all doubles + inner bull for the double round", () => {
@@ -808,8 +808,10 @@ describe("Lumberjack engine", () => {
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       expect(s.currentRound).toBe(2);
       const hints = getBoardHintsLumberjack(s);
-      expect(hints.highlightDoubles).toEqual([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]);
-      expect(hints.highlightBullInner).toBe(true);
+      const rule = hints.highlights?.[0];
+      expect(rule?.segments).toEqual([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]);
+      expect(rule?.rings).toEqual(["double"]);
+      expect(rule?.bullInner).toBe(true);
     });
 
     it("highlights only 15+ doubles when dtAbove15Only is on", () => {
@@ -822,8 +824,10 @@ describe("Lumberjack engine", () => {
       s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       expect(s.currentRound).toBe(2);
       const hints = getBoardHintsLumberjack(s);
-      expect(hints.highlightDoubles).toEqual([15, 16, 17, 18, 19, 20]);
-      expect(hints.highlightBullInner).toBe(true);
+      const rule = hints.highlights?.[0];
+      expect(rule?.segments).toEqual([15, 16, 17, 18, 19, 20]);
+      expect(rule?.rings).toEqual(["double"]);
+      expect(rule?.bullInner).toBe(true);
     });
 
     it("highlights all triples for the triple round", () => {
@@ -833,8 +837,10 @@ describe("Lumberjack engine", () => {
       for (let i = 0; i < 8; i++) s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       expect(s.currentRound).toBe(4);
       const hints = getBoardHintsLumberjack(s);
-      expect(hints.highlightTriples).toEqual([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]);
-      expect(hints.highlightBullInner).toBeUndefined();
+      const rule = hints.highlights?.[0];
+      expect(rule?.segments).toEqual([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]);
+      expect(rule?.rings).toEqual(["triple"]);
+      expect(rule?.bullInner).toBeUndefined();
     });
 
     it("highlights only 15+ triples when dtAbove15Only is on", () => {
@@ -844,7 +850,9 @@ describe("Lumberjack engine", () => {
       for (let i = 0; i < 8; i++) s = throwN(s, [["miss"], ["miss"], ["miss"]]);
       expect(s.currentRound).toBe(4);
       const hints = getBoardHintsLumberjack(s);
-      expect(hints.highlightTriples).toEqual([15, 16, 17, 18, 19, 20]);
+      const rule = hints.highlights?.[0];
+      expect(rule?.segments).toEqual([15, 16, 17, 18, 19, 20]);
+      expect(rule?.rings).toEqual(["triple"]);
     });
 
     it("returns empty hints for exact41 round", () => {

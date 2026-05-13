@@ -1,6 +1,7 @@
 import type { Team, ThrowRecord } from "@/shared/types/core";
 import type {
   ApplyThrowResult,
+  BoardHints,
   DartSegment,
   InitContext,
   QuickInputGroup,
@@ -152,11 +153,11 @@ export function getTurnHintATC(state: ATCEngineState, teamId: string): { label: 
   return { label: "Aim for", value: p < 20 ? String(p + 1) : "Bull" };
 }
 
-export function getBoardHintsATC(state: ATCEngineState) {
+export function getBoardHintsATC(state: ATCEngineState): BoardHints {
   const teamId = state.turnOrder[state.pointer.teamIdx]!;
   const p = state.progressByTeam[teamId] ?? 0;
   const target: DartSegment = p < 20 ? ((p + 1) as DartSegment) : "bull";
-  return { highlight: [target] as ReadonlyArray<DartSegment> };
+  return { highlights: [{ segments: [target] }] };
 }
 
 export function getQuickInputsATC(state: ATCEngineState): QuickInputGroup[] | null {

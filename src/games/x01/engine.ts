@@ -348,13 +348,13 @@ function checkoutToHints(path: CheckoutDart[]): BoardHints {
 
   if (first.segment === "bull") {
     return first.multiplier === 2
-      ? { highlightBullInner: true }
-      : { highlight: ["bull"] };
+      ? { highlights: [{ segments: [], bullInner: true }] }
+      : { highlights: [{ segments: ["bull"] }] };
   }
   const seg = first.segment as DartSegment;
-  if (first.multiplier === 2) return { highlightDoubles: [seg] };
-  if (first.multiplier === 3) return { highlightTriples: [seg] };
-  return { highlight: [seg] };
+  if (first.multiplier === 2) return { highlights: [{ segments: [seg], rings: ["double"] }] };
+  if (first.multiplier === 3) return { highlights: [{ segments: [seg], rings: ["triple"] }] };
+  return { highlights: [{ segments: [seg] }] };
 }
 
 // --- Public API ---
@@ -390,7 +390,7 @@ export function getBoardHintsX01(state: X01EngineState): BoardHints {
   if (state.doubleIn && !state.doubleInAchieved[teamId]) {
     const segs: DartSegment[] = [];
     for (let i = 1; i <= 20; i++) segs.push(i as DartSegment);
-    return { highlightDoubles: segs, highlightBullInner: true };
+    return { highlights: [{ segments: segs, rings: ["double"], bullInner: true }] };
   }
 
   const score = state.scoreByTeam[teamId] ?? 0;

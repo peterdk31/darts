@@ -239,7 +239,7 @@ export function getBoardHintsCricket(state: CricketEngineState): BoardHints {
       highlight.push(tg);
     }
   }
-  return { highlight, dim };
+  return { highlights: [{ segments: highlight }], dim };
 }
 
 export function getQuickInputsCricket(

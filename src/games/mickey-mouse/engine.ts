@@ -3,6 +3,7 @@ import type {
   ApplyThrowResult,
   BoardHints,
   DartSegment,
+  HighlightRule,
   InitContext,
   QuickInputAction,
   QuickInputGroup,
@@ -271,29 +272,31 @@ export function getBoardHintsMickey(state: MickeyEngineState): BoardHints {
   const marks = state.marksByTeam[teamId] ?? {};
   const open = (key: string) => (marks[key] ?? 0) < 3;
 
-  const highlight: DartSegment[] = [];
+  const numberSegments: DartSegment[] = [];
   const allSegments: DartSegment[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-  const highlightDoubles: DartSegment[] = [];
-  const highlightTriples: DartSegment[] = [];
 
   for (const tg of state.targets) {
     if (typeof tg === "number" && open(String(tg))) {
-      highlight.push(tg as DartSegment);
+      numberSegments.push(tg as DartSegment);
     }
   }
 
+  const highlights: HighlightRule[] = [];
+
+  if (numberSegments.length > 0) {
+    highlights.push({ segments: numberSegments });
+  }
   if (open("double")) {
-    highlightDoubles.push(...allSegments);
+    highlights.push({ segments: allSegments, rings: ["double"], bullInner: open("bull") || undefined });
+  } else if (open("bull")) {
+    highlights.push({ segments: [], bullInner: true });
   }
   if (open("triple")) {
-    highlightTriples.push(...allSegments);
+    highlights.push({ segments: allSegments, rings: ["triple"] });
   }
 
   return {
-    highlight: highlight.length > 0 ? highlight : undefined,
-    highlightDoubles: highlightDoubles.length > 0 ? highlightDoubles : undefined,
-    highlightTriples: highlightTriples.length > 0 ? highlightTriples : undefined,
-    highlightBullInner: open("bull") || open("double") || undefined,
+    highlights: highlights.length > 0 ? highlights : undefined,
   };
 }
 

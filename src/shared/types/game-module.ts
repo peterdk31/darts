@@ -71,15 +71,26 @@ export type DartSegment =
   | 20
   | "bull";
 
+export type SegmentRing = "single" | "double" | "triple";
+
+export interface HighlightRule {
+  segments: ReadonlyArray<DartSegment>;
+  rings?: ReadonlyArray<SegmentRing>;
+  bullInner?: boolean;
+}
+
+export interface SegmentColorRule {
+  segments: ReadonlyArray<DartSegment>;
+  color: string;
+  opacity?: number;
+  rings?: ReadonlyArray<SegmentRing>;
+  bullInner?: boolean;
+}
+
 export interface BoardHints {
-  highlight?: ReadonlyArray<DartSegment>;
+  highlights?: ReadonlyArray<HighlightRule>;
+  segmentColors?: ReadonlyArray<SegmentColorRule>;
   dim?: ReadonlyArray<DartSegment>;
-  /** Highlight only the double ring for these segments. */
-  highlightDoubles?: ReadonlyArray<DartSegment>;
-  /** Highlight only the triple ring for these segments. */
-  highlightTriples?: ReadonlyArray<DartSegment>;
-  /** Highlight only the inner bull (e.g. counts as a double). */
-  highlightBullInner?: boolean;
 }
 
 export interface QuickInputAction {

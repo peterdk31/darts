@@ -1,0 +1,116 @@
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Player card ───────────────────────────────────────────────── */
+
+.card,
+.cardEliminated {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-2) var(--space-3, 12px);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface-2, #1a1a2e);
+  border-left: 4px solid transparent;
+}
+
+.cardEliminated {
+  opacity: 0.3;
+}
+
+/* ── Round / mine info ─────────────────────────────────────────── */
+
+.roundBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--color-warning, #d69e2e);
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-2, 8px);
+  display: inline-block;
+}
+
+/* ── Name + lives bar ──────────────────────────────────────────── */
+
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.livesBar {
+  display: flex;
+  gap: 3px;
+}
+
+.pip,
+.pipEmpty {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.pip {
+  background: var(--color-danger, #e53e3e);
+}
+
+.pipEmpty {
+  background: var(--color-fg-muted, #666);
+  opacity: 0.2;
+}
+
+.outLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-fg-muted, #888);
+  text-transform: uppercase;
+}
+
+/* ── Right side: score + lives ───────────────────────────────── */
+
+.right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.score {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg, #fff);
+}
+
+.livesCount {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-danger, #e53e3e);
+}
+
+.livesZero {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-muted, #888);
+  opacity: 0.5;
+}

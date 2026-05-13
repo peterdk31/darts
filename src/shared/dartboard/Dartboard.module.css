@@ -142,6 +142,16 @@
   opacity: 0.45;
 }
 
+.hint-colored {
+}
+
+.hint-colored-overlay {
+  fill: var(--hint-color, currentColor);
+  opacity: var(--hint-opacity, 1);
+  stroke: none;
+  pointer-events: none;
+}
+
 .overlay {
   position: absolute;
   inset: 0;

@@ -141,6 +141,22 @@
   opacity: 0.45;
 }
 
+.colored {
+  position: relative;
+}
+
+.colored::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--hint-color);
+  opacity: var(--hint-opacity, 1);
+  pointer-events: none;
+}
+
+.cellColored {
+}
+
 .flash {
   position: absolute;
   top: 50%;

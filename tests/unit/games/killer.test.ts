@@ -511,21 +511,24 @@ describe("killer engine – board hints", () => {
     let s = initKiller(ctx(makeThreeTeams(), { targets: "all" }));
     s = selectNumbers(s);
     const hints = getBoardHintsKiller(s);
-    expect(hints.highlight).toEqual([7]);
+    expect(hints.highlights?.[0]?.segments).toEqual([7]);
+    expect(hints.highlights?.[0]?.rings).toBeUndefined();
   });
 
   it("highlights double ring in 'doubles' mode", () => {
     let s = initKiller(ctx(makeThreeTeams(), { targets: "doubles" }));
     s = selectNumbers(s);
     const hints = getBoardHintsKiller(s);
-    expect(hints.highlightDoubles).toEqual([7]);
+    expect(hints.highlights?.[0]?.segments).toEqual([7]);
+    expect(hints.highlights?.[0]?.rings).toEqual(["double"]);
   });
 
   it("highlights triple ring in 'trebles' mode", () => {
     let s = initKiller(ctx(makeThreeTeams(), { targets: "trebles" }));
     s = selectNumbers(s);
     const hints = getBoardHintsKiller(s);
-    expect(hints.highlightTriples).toEqual([7]);
+    expect(hints.highlights?.[0]?.segments).toEqual([7]);
+    expect(hints.highlights?.[0]?.rings).toEqual(["triple"]);
   });
 
   it("highlights opponent segments for killer", () => {
@@ -534,8 +537,9 @@ describe("killer engine – board hints", () => {
     );
     s = selectNumbers(s);
     const hints = getBoardHintsKiller(s);
-    expect(hints.highlight).toEqual(expect.arrayContaining([12, 3]));
-    expect(hints.highlight).not.toContain(7);
+    const segs = hints.highlights?.[0]?.segments;
+    expect(segs).toEqual(expect.arrayContaining([12, 3]));
+    expect(segs).not.toContain(7);
   });
 });
 

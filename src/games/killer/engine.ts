@@ -413,11 +413,11 @@ function segmentHints(
 ): BoardHints {
   switch (targets) {
     case "doubles":
-      return { highlightDoubles: segments };
+      return { highlights: [{ segments, rings: ["double"] }] };
     case "trebles":
-      return { highlightTriples: segments };
+      return { highlights: [{ segments, rings: ["triple"] }] };
     default:
-      return { highlight: segments };
+      return { highlights: [{ segments }] };
   }
 }
 
@@ -429,7 +429,7 @@ export function getBoardHintsKiller(state: KillerEngineState): BoardHints {
     const available = (
       Array.from({ length: 20 }, (_, i) => i + 1) as DartSegment[]
     ).filter((n) => !taken.has(n as number));
-    return { highlight: available };
+    return { highlights: [{ segments: available }] };
   }
 
   if (!state.isKiller[teamId]) {

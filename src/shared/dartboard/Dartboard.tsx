@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "react";
-import type { BoardHints, DartSegment } from "@/shared/types/game-module";
+import type { BoardHints, DartSegment, SegmentRing } from "@/shared/types/game-module";
 import type { ThrowSegment } from "@/shared/types/core";
 import styles from "./Dartboard.module.css";
 
@@ -115,23 +115,47 @@ export function Dartboard({
     return () => clearTimeout(t);
   }, [flash]);
 
-  const highlightSet = useMemo(
-    () => new Set<DartSegment>(boardHints?.highlight ?? []),
-    [boardHints],
-  );
+  const ALL_RINGS: SegmentRing[] = ["single", "double", "triple"];
+
   const dimSet = useMemo(
     () => new Set<DartSegment>(boardHints?.dim ?? []),
     [boardHints],
   );
-  const highlightDoublesSet = useMemo(
-    () => new Set<DartSegment>(boardHints?.highlightDoubles ?? []),
-    [boardHints],
-  );
-  const highlightTriplesSet = useMemo(
-    () => new Set<DartSegment>(boardHints?.highlightTriples ?? []),
-    [boardHints],
-  );
-  const highlightBullInner = boardHints?.highlightBullInner ?? false;
+
+  const colorLookup = useMemo(() => {
+    const map = new Map<string, { color: string; opacity: number }>();
+    for (const rule of boardHints?.segmentColors ?? []) {
+      const rings = rule.rings ?? ALL_RINGS;
+      const entry = { color: rule.color, opacity: rule.opacity ?? 1 };
+      for (const seg of rule.segments) {
+        if (seg === "bull") {
+          map.set("bull:outer", entry);
+          map.set("bull:inner", entry);
+        } else {
+          for (const ring of rings) map.set(`${seg}:${ring}`, entry);
+        }
+      }
+      if (rule.bullInner) map.set("bull:inner", entry);
+    }
+    return map;
+  }, [boardHints]);
+
+  const hlLookup = useMemo(() => {
+    const set = new Set<string>();
+    for (const rule of boardHints?.highlights ?? []) {
+      const rings = rule.rings ?? ALL_RINGS;
+      for (const seg of rule.segments) {
+        if (seg === "bull") {
+          set.add("bull:outer");
+          set.add("bull:inner");
+        } else {
+          for (const ring of rings) set.add(`${seg}:${ring}`);
+        }
+      }
+      if (rule.bullInner) set.add("bull:inner");
+    }
+    return set;
+  }, [boardHints]);
 
   function svgPointFromEvent(evt: { clientX: number; clientY: number }): {
     cx: number;
@@ -182,28 +206,38 @@ export function Dartboard({
     fire({ segment: "miss", multiplier: 1, score: 0, cx, cy, label: "Miss" });
   }
 
-  function classForSegmentHint(
-    num: number,
-    ring: "single" | "double" | "triple",
-    baseClass: string | undefined,
-  ): string {
-    const seg = num as DartSegment;
-    const base = baseClass ?? "";
-    if (highlightSet.has(seg)) return `${base} ${styles["hint-highlight"] ?? ""}`;
-    if (ring === "double" && highlightDoublesSet.has(seg))
-      return `${base} ${styles["hint-highlight"] ?? ""}`;
-    if (ring === "triple" && highlightTriplesSet.has(seg))
-      return `${base} ${styles["hint-highlight"] ?? ""}`;
-    if (dimSet.has(seg)) return `${base} ${styles["hint-dim"] ?? ""}`;
-    return base;
+  function segmentClass(num: number, ring: SegmentRing, baseClass: string): string {
+    const key = `${num}:${ring}`;
+    if (colorLookup.has(key)) {
+      const extra = hlLookup.has(key) ? ` ${styles["hint-highlight"]}` : "";
+      return `${baseClass} ${styles["hint-colored"]}${extra}`;
+    }
+    if (hlLookup.has(key)) return `${baseClass} ${styles["hint-highlight"]}`;
+    if (dimSet.has(num as DartSegment)) return `${baseClass} ${styles["hint-dim"]}`;
+    return baseClass;
   }
 
-  function classForBullHint(baseClass: string | undefined, inner?: boolean): string {
-    const base = baseClass ?? "";
-    if (highlightSet.has("bull")) return `${base} ${styles["hint-highlight"] ?? ""}`;
-    if (inner && highlightBullInner) return `${base} ${styles["hint-highlight"] ?? ""}`;
-    if (dimSet.has("bull")) return `${base} ${styles["hint-dim"] ?? ""}`;
-    return base;
+  function segmentStyle(num: number, ring: SegmentRing): CSSProperties | undefined {
+    const entry = colorLookup.get(`${num}:${ring}`);
+    if (!entry) return undefined;
+    return { "--hint-color": entry.color, "--hint-opacity": entry.opacity } as CSSProperties;
+  }
+
+  function bullClass(baseClass: string, inner: boolean): string {
+    const key = inner ? "bull:inner" : "bull:outer";
+    if (colorLookup.has(key)) {
+      const extra = hlLookup.has(key) ? ` ${styles["hint-highlight"]}` : "";
+      return `${baseClass} ${styles["hint-colored"]}${extra}`;
+    }
+    if (hlLookup.has(key)) return `${baseClass} ${styles["hint-highlight"]}`;
+    if (dimSet.has("bull")) return `${baseClass} ${styles["hint-dim"]}`;
+    return baseClass;
+  }
+
+  function bullStyle(inner: boolean): CSSProperties | undefined {
+    const entry = colorLookup.get(inner ? "bull:inner" : "bull:outer");
+    if (!entry) return undefined;
+    return { "--hint-color": entry.color, "--hint-opacity": entry.opacity } as CSSProperties;
   }
 
   return (
@@ -238,19 +272,20 @@ export function Dartboard({
             const dbl = arcPath(R_DOUBLE_INNER, R_OUTER, r.startDeg, r.endDeg);
             const tpl = arcPath(R_TRIPLE_INNER, R_TRIPLE_OUTER, r.startDeg, r.endDeg);
             const lightWedge = isLightWedge(r.index);
-            const wedgeClass = lightWedge ? styles["wedge-light"] : styles["wedge-dark"];
+            const wedgeClass = lightWedge ? styles["wedge-light"]! : styles["wedge-dark"]!;
             const dblClass = lightWedge
-              ? styles["double-light"]
-              : styles["double-dark"];
+              ? styles["double-light"]!
+              : styles["double-dark"]!;
             const tplClass = lightWedge
-              ? styles["triple-light"]
-              : styles["triple-dark"];
+              ? styles["triple-light"]!
+              : styles["triple-dark"]!;
 
             return (
               <g key={r.number} pointerEvents="visiblePainted">
                 <path
                   d={single1}
-                  className={classForSegmentHint(r.number, "single", wedgeClass)}
+                  className={segmentClass(r.number, "single", wedgeClass)}
+                  style={segmentStyle(r.number, "single")}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSegmentClick(e, r, 1);
@@ -260,7 +295,8 @@ export function Dartboard({
                 />
                 <path
                   d={single2}
-                  className={classForSegmentHint(r.number, "single", wedgeClass)}
+                  className={segmentClass(r.number, "single", wedgeClass)}
+                  style={segmentStyle(r.number, "single")}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSegmentClick(e, r, 1);
@@ -270,7 +306,8 @@ export function Dartboard({
                 />
                 <path
                   d={dbl}
-                  className={classForSegmentHint(r.number, "double", dblClass)}
+                  className={segmentClass(r.number, "double", dblClass)}
+                  style={segmentStyle(r.number, "double")}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSegmentClick(e, r, 2);
@@ -280,7 +317,8 @@ export function Dartboard({
                 />
                 <path
                   d={tpl}
-                  className={classForSegmentHint(r.number, "triple", tplClass)}
+                  className={segmentClass(r.number, "triple", tplClass)}
+                  style={segmentStyle(r.number, "triple")}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSegmentClick(e, r, 3);
@@ -292,38 +330,52 @@ export function Dartboard({
             );
           })}
 
-          {/* Highlight outlines drawn on top so neighbor strokes don't clip them. */}
-          {REGIONS.filter((r) => highlightSet.has(r.number as DartSegment)).map((r) => (
-            <path
-              key={`hl-${r.number}`}
-              d={arcPath(R_OUTER_BULL, R_OUTER, r.startDeg, r.endDeg)}
-              className={styles["hint-highlight-overlay"]}
-              pointerEvents="none"
-            />
-          ))}
-          {REGIONS.filter((r) => highlightDoublesSet.has(r.number as DartSegment)).map((r) => (
-            <path
-              key={`hl-d-${r.number}`}
-              d={arcPath(R_DOUBLE_INNER, R_OUTER, r.startDeg, r.endDeg)}
-              className={styles["hint-highlight-overlay"]}
-              pointerEvents="none"
-            />
-          ))}
-          {REGIONS.filter((r) => highlightTriplesSet.has(r.number as DartSegment)).map((r) => (
-            <path
-              key={`hl-t-${r.number}`}
-              d={arcPath(R_TRIPLE_INNER, R_TRIPLE_OUTER, r.startDeg, r.endDeg)}
-              className={styles["hint-highlight-overlay"]}
-              pointerEvents="none"
-            />
-          ))}
+          {/* Stroke overlays drawn on top so neighbor strokes don't clip them. */}
+          {REGIONS.map((r) => {
+            const seg = r.number as DartSegment;
+            const hasFullColor = colorLookup.has(`${seg}:single`) && colorLookup.has(`${seg}:double`) && colorLookup.has(`${seg}:triple`);
+            const hasFullHl = hlLookup.has(`${seg}:single`) && hlLookup.has(`${seg}:double`) && hlLookup.has(`${seg}:triple`);
+            const entries: { key: string; d: string; colorEntry?: { color: string; opacity: number } }[] = [];
+
+            if (hasFullColor) {
+              const c = colorLookup.get(`${seg}:single`)!;
+              entries.push({ key: `c-${seg}`, d: arcPath(R_OUTER_BULL, R_OUTER, r.startDeg, r.endDeg), colorEntry: c });
+            } else if (hasFullHl) {
+              entries.push({ key: `h-${seg}`, d: arcPath(R_OUTER_BULL, R_OUTER, r.startDeg, r.endDeg) });
+            } else {
+              for (const ring of ALL_RINGS) {
+                const k = `${seg}:${ring}`;
+                const c = colorLookup.get(k);
+                const hl = hlLookup.has(k);
+                if (!c && !hl) continue;
+                const ringArcs = ring === "double"
+                  ? [arcPath(R_DOUBLE_INNER, R_OUTER, r.startDeg, r.endDeg)]
+                  : ring === "triple"
+                    ? [arcPath(R_TRIPLE_INNER, R_TRIPLE_OUTER, r.startDeg, r.endDeg)]
+                    : [arcPath(R_TRIPLE_OUTER, R_DOUBLE_INNER, r.startDeg, r.endDeg), arcPath(R_OUTER_BULL, R_TRIPLE_INNER, r.startDeg, r.endDeg)];
+                for (let i = 0; i < ringArcs.length; i++) {
+                  entries.push({ key: `${ring[0]}-${seg}-${i}`, d: ringArcs[i]!, colorEntry: c });
+                }
+              }
+            }
+            return entries.map((e) => (
+              <path
+                key={e.key}
+                d={e.d}
+                className={e.colorEntry ? styles["hint-colored-overlay"]! : styles["hint-highlight-overlay"]!}
+                style={e.colorEntry ? { "--hint-color": e.colorEntry.color, "--hint-opacity": e.colorEntry.opacity } as CSSProperties : undefined}
+                pointerEvents="none"
+              />
+            ));
+          })}
 
           {/* Bull rings */}
           <circle
             cx={CENTER}
             cy={CENTER}
             r={R_OUTER_BULL}
-            className={classForBullHint(styles["bull-outer"])}
+            className={bullClass(styles["bull-outer"]!, false)}
+            style={bullStyle(false)}
             onClick={(e) => {
               e.stopPropagation();
               handleBullClick(e, "outer");
@@ -335,7 +387,8 @@ export function Dartboard({
             cx={CENTER}
             cy={CENTER}
             r={R_INNER_BULL}
-            className={classForBullHint(styles["bull-inner"], true)}
+            className={bullClass(styles["bull-inner"]!, true)}
+            style={bullStyle(true)}
             onClick={(e) => {
               e.stopPropagation();
               handleBullClick(e, "inner");
@@ -343,21 +396,23 @@ export function Dartboard({
             role="button"
             aria-label="Inner bull, 50"
           />
-          {highlightSet.has("bull") && (
+          {(hlLookup.has("bull:outer") || colorLookup.has("bull:outer")) && (
             <circle
               cx={CENTER}
               cy={CENTER}
               r={R_OUTER_BULL}
-              className={styles["hint-highlight-overlay"]}
+              className={colorLookup.has("bull:outer") ? styles["hint-colored-overlay"]! : styles["hint-highlight-overlay"]!}
+              style={colorLookup.has("bull:outer") ? { "--hint-color": colorLookup.get("bull:outer")!.color, "--hint-opacity": colorLookup.get("bull:outer")!.opacity } as CSSProperties : undefined}
               pointerEvents="none"
             />
           )}
-          {highlightBullInner && !highlightSet.has("bull") && (
+          {(hlLookup.has("bull:inner") || colorLookup.has("bull:inner")) && !hlLookup.has("bull:outer") && !colorLookup.has("bull:outer") && (
             <circle
               cx={CENTER}
               cy={CENTER}
               r={R_INNER_BULL}
-              className={styles["hint-highlight-overlay"]}
+              className={colorLookup.has("bull:inner") ? styles["hint-colored-overlay"]! : styles["hint-highlight-overlay"]!}
+              style={colorLookup.has("bull:inner") ? { "--hint-color": colorLookup.get("bull:inner")!.color, "--hint-opacity": colorLookup.get("bull:inner")!.opacity } as CSSProperties : undefined}
               pointerEvents="none"
             />
           )}

@@ -394,18 +394,18 @@ export function getBoardHintsLumberjack(
   if (state.currentRound >= rounds.length) return {};
   const round = rounds[state.currentRound]!;
   if (round.type === "number") {
-    return { highlight: [round.target as DartSegment] };
+    return { highlights: [{ segments: [round.target as DartSegment] }] };
   }
   if (round.type === "bull") {
-    return { highlight: ["bull" as DartSegment] };
+    return { highlights: [{ segments: ["bull" as DartSegment] }] };
   }
   if (round.type === "double") {
     const segs = state.dtAbove15Only ? SEGMENTS_15_PLUS : ALL_SEGMENTS;
-    return { highlightDoubles: segs, highlightBullInner: true };
+    return { highlights: [{ segments: segs, rings: ["double"], bullInner: true }] };
   }
   if (round.type === "triple") {
     const segs = state.dtAbove15Only ? SEGMENTS_15_PLUS : ALL_SEGMENTS;
-    return { highlightTriples: segs };
+    return { highlights: [{ segments: segs, rings: ["triple"] }] };
   }
   return {};
 }
