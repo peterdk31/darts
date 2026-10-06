@@ -13,6 +13,10 @@ function makeFlashKey(): number {
   return Date.now() + Math.random();
 }
 
+function isMiss(action: QuickInputAction): boolean {
+  return action.variant === "miss" || action.segment === "miss";
+}
+
 export function QuickBoard({ groups, onThrow, disabled = false }: Props) {
   const [flash, setFlash] = useState<{ key: number; label: string } | null>(null);
 
@@ -39,34 +43,50 @@ export function QuickBoard({ groups, onThrow, disabled = false }: Props) {
   function btnClass(action: QuickInputAction): string {
     const classes = [styles.btn];
     if (action.variant === "meta") classes.push(styles.metaBtn!);
-    else if (action.variant === "miss" || action.segment === "miss") classes.push(styles.missBtn!);
     return classes.filter(Boolean).join(" ");
+  }
+
+  // Miss is rendered by the play page as a pinned bar for every board layout.
+  const targetGroups = groups
+    .map((g) => ({ ...g, actions: g.actions.filter((a) => !isMiss(a)) }))
+    .filter((g) => g.actions.length > 0);
+
+  function renderButton(action: QuickInputAction, key: number) {
+    return (
+      <button
+        key={key}
+        type="button"
+        className={btnClass(action)}
+        onClick={() => handleClick(action)}
+        disabled={disabled}
+      >
+        <span>{action.label}</span>
+        {action.marks && (
+          <span
+            className={styles.marks}
+            role="img"
+            aria-label={`${action.marks.current} of ${action.marks.max} hits`}
+          >
+            {Array.from({ length: action.marks.max }, (_, i) => (
+              <span
+                key={i}
+                className={`${styles.markSegment} ${i < action.marks!.current ? styles.markFilled : ""}`}
+              />
+            ))}
+          </span>
+        )}
+      </button>
+    );
   }
 
   return (
     <div className={styles.wrapper}>
       <div className={`${styles.container} ${disabled ? styles.disabled : ""}`}>
-        {groups.map((group, gi) => (
+        {targetGroups.map((group, gi) => (
           <div key={gi} className={styles.group}>
             {group.label && <div className={styles.groupLabel}>{group.label}</div>}
             <div className={styles.buttons}>
-              {group.actions.map((action, ai) => (
-                <button
-                  key={ai}
-                  type="button"
-                  className={btnClass(action)}
-                  onClick={() => handleClick(action)}
-                  disabled={disabled}
-                >
-                  <span>{action.label}</span>
-                  {action.marks && (
-                    <span className={styles.marks}>
-                      {"●".repeat(action.marks.current)}
-                      {"○".repeat(action.marks.max - action.marks.current)}
-                    </span>
-                  )}
-                </button>
-              ))}
+              {group.actions.map(renderButton)}
             </div>
           </div>
         ))}

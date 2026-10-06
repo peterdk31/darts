@@ -397,21 +397,14 @@ describe("minesweeper engine – round progression", () => {
 // ---------------------------------------------------------------------------
 
 describe("minesweeper engine – board hints", () => {
-  it("colors safe segments green, mines red, bull always safe", () => {
+  it("colors only the mines red, leaving safe segments as a normal board", () => {
     const s = withMines(initMinesweeper(ctx(makeTwoTeams())), [5, 10]);
     const hints = getBoardHintsMinesweeper(s);
 
-    expect(hints.segmentColors).toHaveLength(2);
-    const [safeRule, mineRule] = hints.segmentColors!;
-    expect(safeRule!.segments).toHaveLength(18 + 1);
-    expect(safeRule!.segments).not.toContain(5);
-    expect(safeRule!.segments).not.toContain(10);
-    expect(safeRule!.color).toContain("success");
-    expect(safeRule!.segments).toContain("bull");
-    expect(safeRule!.bullInner).toBe(true);
-
-    expect(mineRule!.segments).toEqual(expect.arrayContaining([5, 10]));
-    expect(mineRule!.color).toContain("danger");
+    expect(hints.segmentColors).toHaveLength(1);
+    const [mineRule] = hints.segmentColors!;
+    expect(mineRule!.segments).toEqual([5, 10]);
+    expect(mineRule!.color).toBe("#cc0000");
 
     expect(hints.dim).toBeUndefined();
   });

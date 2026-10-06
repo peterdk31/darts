@@ -439,18 +439,17 @@ export function PlayPage() {
               }
             />
           )}
-          {!useQuickBoard && (
-            <div className={styles.boardActions}>
-              <Button
-                variant="secondary"
-                onClick={handleMiss}
-                disabled={bustBanner !== null || pendingIntent !== null || switchOverlay !== null}
-                className={styles.missBtn}
-              >
-                Miss
-              </Button>
-            </div>
-          )}
+          {/* Pinned to the bottom of the viewport so Miss is always reachable. */}
+          <div className={styles.boardActions}>
+            <Button
+              variant="secondary"
+              onClick={handleMiss}
+              disabled={bustBanner !== null || pendingIntent !== null || switchOverlay !== null}
+              className={styles.missBtn}
+            >
+              Miss
+            </Button>
+          </div>
           <div className={styles.controls}>
             <Button
               variant="ghost"

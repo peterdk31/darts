@@ -342,15 +342,7 @@ export function getTurnHintMinesweeper(
 // ---------------------------------------------------------------------------
 
 export function getBoardHintsMinesweeper(state: MinesweeperEngineState): BoardHints {
-  const safeSegments: DartSegment[] = [];
-  const mineSegments: DartSegment[] = [];
-  for (let n = 1; n <= 20; n++) {
-    if (state.mines.includes(n)) {
-      mineSegments.push(n as DartSegment);
-    } else {
-      safeSegments.push(n as DartSegment);
-    }
-  }
+  const mineSegments = state.mines.map((n) => n as DartSegment);
   return {
     segmentColors: [
       { segments: mineSegments, color: "#cc0000", opacity: 1 },
