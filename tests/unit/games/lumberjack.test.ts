@@ -3,6 +3,7 @@ import {
   applyThrowLumberjack,
   computeRoundPoints,
   getBoardHintsLumberjack,
+  getQuickInputsLumberjack,
   initLumberjack,
   LUMBERJACK_ROUNDS,
   selectScoreboardLumberjack,
@@ -437,6 +438,18 @@ describe("Lumberjack engine", () => {
       const t3 = mkThrow(s, 1); // 20+20+1=41
       const r3 = applyThrowLumberjack(s, t3);
       expect((r3.effects[0] as { delta: number }).delta).toBe(41);
+    });
+
+    it("quick inputs offer single, double and treble for every number", () => {
+      let s = initLumberjack(ctx(makeTeams()));
+      s = skipToRound(6, s);
+      const groups = getQuickInputsLumberjack(s)!;
+      const tiles = groups.filter((g) => g.layout === "tile");
+      expect(tiles).toHaveLength(20);
+      expect(tiles[0]!.label).toMatch(/Round 7/);
+      expect(tiles[6]!.actions.map((a) => a.label)).toEqual(["7", "D7", "T7"]);
+      const labels = groups.flatMap((g) => g.actions.map((a) => a.label));
+      expect(labels).toEqual(expect.arrayContaining(["Bull", "D-Bull", "Miss"]));
     });
 
     it("gives each player on a team their own chance", () => {

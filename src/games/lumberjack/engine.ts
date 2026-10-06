@@ -504,17 +504,29 @@ export function getQuickInputsLumberjack(
       ? `${roundLabel}  (need ${remaining} in ${3 - dartsInChance})`
       : roundLabel;
 
-    return [{
-      label: chanceLabel,
-      actions: [
-        ...ALL_SEGMENTS.map((s) => ({
-          label: String(s), segment: s as number, multiplier: 1 as const, score: s as number,
-        })),
-        { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25 },
-        { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 },
-        miss,
-      ],
-    }];
+    // Every dart scores its full value, so each number offers S/D/T.
+    const numberTiles: QuickInputGroup[] = ALL_SEGMENTS.map((s, i) => {
+      const n = s as number;
+      return {
+        label: i === 0 ? chanceLabel : undefined,
+        layout: "tile",
+        actions: [
+          { label: String(n), segment: n, multiplier: 1, score: n },
+          { label: `D${n}`, segment: n, multiplier: 2, score: n * 2 },
+          { label: `T${n}`, segment: n, multiplier: 3, score: n * 3 },
+        ],
+      };
+    });
+    return [
+      ...numberTiles,
+      {
+        actions: [
+          { label: "Bull", segment: "outer-bull", multiplier: 1, score: 25 },
+          { label: "D-Bull", segment: "inner-bull", multiplier: 2, score: 50 },
+        ],
+      },
+      { actions: [miss] },
+    ];
   }
 
   return null;

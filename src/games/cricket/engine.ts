@@ -267,6 +267,7 @@ export function getQuickInputsCricket(
       });
     } else {
       groups.push({
+        layout: "tile",
         actions: [
           { label: String(tg), segment: tg, multiplier: 1, score: tg, marks: m },
           { label: `D${tg}`, segment: tg, multiplier: 2, score: tg * 2, marks: m },

@@ -117,6 +117,13 @@ export interface QuickInputAction {
 
 export interface QuickInputGroup {
   label?: string;
+  /**
+   * "tile": a compact number tile — the first action is the single (shown as
+   * the tile's main button), the rest render as small D/T buttons below it.
+   * Consecutive tile groups share one grid, headed by the first one's label.
+   * Defaults to a row of buttons.
+   */
+  layout?: "row" | "tile";
   actions: QuickInputAction[];
 }
 

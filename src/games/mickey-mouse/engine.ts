@@ -322,7 +322,7 @@ export function getQuickInputsMickey(
         { label: `T${tg}`, segment: tg, multiplier: 3, score: tg * 3, intent: "number", marks: m },
       );
     }
-    groups.push({ actions });
+    groups.push({ layout: "tile", actions });
   }
 
   const metaActions: QuickInputAction[] = [];
