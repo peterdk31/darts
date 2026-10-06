@@ -568,3 +568,21 @@ export function getQuickInputsKiller(
 
   return groups;
 }
+
+/**
+ * A dart counts as a hit when it claimed a number, gained the thrower's team
+ * lives, or took lives from (or eliminated) an opponent.
+ */
+export function isScoringThrowKiller(
+  before: KillerEngineState,
+  after: KillerEngineState,
+  throw_: ThrowRecord,
+): boolean {
+  const own = throw_.teamId;
+  if (before.assignments[own] === undefined && after.assignments[own] !== undefined) return true;
+  if ((after.lives[own] ?? 0) > (before.lives[own] ?? 0)) return true;
+  if (after.eliminatedTeamIds.length > before.eliminatedTeamIds.length) return true;
+  return before.teams.some(
+    (t) => t.id !== own && (after.lives[t.id] ?? 0) < (before.lives[t.id] ?? 0),
+  );
+}

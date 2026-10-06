@@ -125,8 +125,15 @@
 
 .playerStats {
   color: var(--color-fg-muted);
-  white-space: nowrap;
   margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.playerStatsMain {
+  white-space: nowrap;
 }
 
 /* Fallback (old records without summary) */

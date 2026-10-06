@@ -218,7 +218,44 @@ export function redoThrow(manifest: Manifest, game: InProgressGame): StepResult 
   return withThrow(manifest, game, next, game.redoStack.slice(0, -1));
 }
 
+/** One replayed throw with the engine state on either side of it. */
+export interface ThrowStep {
+  throw_: ThrowRecord;
+  before: unknown;
+  after: unknown;
+  effects: ThrowEffect[];
+  /** First dart of the thrower's visit (turn at the board). */
+  visitStart: boolean;
+  /** The dart gave points or progress — see GameManifest.isScoringThrow. */
+  scoring: boolean;
+}
+
+/** Replay `game.throws` from `init`, recording each step for stats. */
+export function replaySteps(manifest: Manifest, game: InProgressGame): ThrowStep[] {
+  const steps: ThrowStep[] = [];
+  let g: InProgressGame = {
+    ...game,
+    throws: [],
+    engineState: manifest.init(makeInitContext(game)),
+    currentTurn: initialCurrentTurn(game.turnOrder, game.playerRotation),
+  };
+  for (const t of game.throws) {
+    const before = g.engineState;
+    const visitStart = g.currentTurn.dartsThrownThisTurn === 0;
+    const r = withThrow(manifest, g, t, []);
+    const after = r.game.engineState;
+    const scoring = manifest.isScoringThrow
+      ? manifest.isScoringThrow(before, after, t)
+      : r.effects.some((e) => e.kind === "scored" && e.delta > 0);
+    steps.push({ throw_: t, before, after, effects: r.effects, visitStart, scoring });
+    g = r.game;
+    if (r.winnerTeamIds) break;
+  }
+  return steps;
+}
+
 export function completedGameRecord(
+  manifest: Manifest,
   game: InProgressGame,
   winnerTeamIds: string[],
 ): CompletedGameRecord {
@@ -230,7 +267,7 @@ export function completedGameRecord(
     winnerTeamIds,
     completedAt: new Date().toISOString(),
     summary: computeWinSummary(
-      game.gameTypeId, game.teams, winnerTeamIds, game.throws, game.engineState,
+      game.gameTypeId, game.teams, winnerTeamIds, replaySteps(manifest, game), game.engineState,
     ),
     finalEngineState: game.engineState,
   };

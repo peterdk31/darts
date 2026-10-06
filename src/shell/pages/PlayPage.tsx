@@ -107,7 +107,7 @@ export function PlayPage() {
     winRecorded.current = finished.id;
     dispatch({
       type: "recordCompletedGame",
-      record: completedGameRecord(finished, winnerTeamIds),
+      record: completedGameRecord(manifest!, finished, winnerTeamIds),
     });
     navigate("/end", { replace: true });
   }

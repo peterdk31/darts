@@ -1,6 +1,7 @@
 import type { GameManifest, SettingDefinition } from "@/shared/types/game-module";
 import { shanghaiSetting } from "@/shared/shanghai";
 import {
+  isScoringThrowMickey,
   applyThrowMickey,
   getBoardHintsMickey,
   getCandidatesForThrow,
@@ -52,6 +53,7 @@ export const mickeyMouseManifest: GameManifest<MickeyEngineState> = {
   getTurnHint: getTurnHintMickey,
   getBoardHints: getBoardHintsMickey,
   getQuickInputs: getQuickInputsMickey,
+  isScoringThrow: isScoringThrowMickey,
   getCandidatesForThrow,
   view: (props) => ScoreboardPanel(props),
 };

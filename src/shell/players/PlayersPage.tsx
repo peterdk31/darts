@@ -3,19 +3,34 @@ import { Button } from "@/shared/components/Button";
 import { useNavigate } from "@/shared/routing/router";
 import { useSessionContext } from "@/shell/session/SessionContext";
 import { playerStore } from "./playerStore";
-import { computeAllPlayerStats, type AggregatePlayerStats } from "./playerStats";
+import { computeAllPlayerStats, emptyPlayerStats, type AggregatePlayerStats } from "./playerStats";
+import { mpr, percent, x01Line } from "@/shell/stats/formatStats";
 import type { RosterPlayer } from "@/shared/types/core";
 import styles from "./PlayersPage.module.css";
 
 const MAX_ACTIVE = 20;
 const MAX_NAME_LENGTH = 30;
 
+const MARKS_LABELS: Record<string, string> = {
+  cricket: "Cricket",
+  "mickey-mouse": "Mickey",
+};
+
 function formatStats(stats: AggregatePlayerStats): string {
   if (stats.gamesPlayed === 0) return "No games yet";
-  const pct = stats.dartsThrown > 0
-    ? Math.round((100 * stats.dartsHit) / stats.dartsThrown)
-    : 0;
-  return `${stats.gamesWon}/${stats.gamesPlayed} won · ${pct}% hit`;
+  const won = `${stats.gamesWon}/${stats.gamesPlayed} won`;
+  if (stats.dartsThrown === 0) return won;
+  return `${won} · ${percent(stats.dartsHit, stats.dartsThrown)} hit`;
+}
+
+function formatGameStats(stats: AggregatePlayerStats): string[] {
+  const lines: string[] = [];
+  if (stats.x01) lines.push(`X01: ${x01Line(stats.x01)}`);
+  for (const [gameTypeId, m] of Object.entries(stats.marks)) {
+    if (m.darts === 0) continue;
+    lines.push(`${MARKS_LABELS[gameTypeId] ?? gameTypeId}: MPR ${mpr(m.marks, m.darts)}`);
+  }
+  return lines;
 }
 
 export function PlayersPage() {
@@ -181,8 +196,13 @@ export function PlayersPage() {
                   <span className={styles.playerName}>{player.displayName}</span>
                 )}
                 <span className={styles.playerMeta}>
-                  {formatStats(statsMap.get(player.id) ?? { gamesPlayed: 0, gamesWon: 0, dartsThrown: 0, dartsHit: 0 })}
+                  {formatStats(statsMap.get(player.id) ?? emptyPlayerStats())}
                 </span>
+                {formatGameStats(statsMap.get(player.id) ?? emptyPlayerStats()).map((line) => (
+                  <span key={line} className={styles.playerMeta}>
+                    {line}
+                  </span>
+                ))}
               </div>
               <div className={styles.actions}>
                 {editingId !== player.id && (

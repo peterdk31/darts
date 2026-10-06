@@ -280,3 +280,32 @@ export function getQuickInputsCricket(
   groups.push({ actions: [{ label: "Miss", segment: "miss", multiplier: 1, score: 0, variant: "miss" }] });
   return groups;
 }
+
+/**
+ * Marks this dart counted for its team: marks toward closing a target plus
+ * marks that scored points. Marks on a target nobody can score on any more
+ * don't count. Used for marks-per-round (MPR) stats.
+ */
+export function countedMarksCricket(
+  before: CricketEngineState,
+  after: CricketEngineState,
+  throw_: ThrowRecord,
+): number {
+  const target = targetForThrow(throw_);
+  if (target === null) return 0;
+  const key = String(target);
+  const b = before.marksByTeam[throw_.teamId]?.[key] ?? 0;
+  const a = after.marksByTeam[throw_.teamId]?.[key] ?? 0;
+  const closing = Math.min(a, 3) - Math.min(b, 3);
+  const points =
+    (after.scoreByTeam[throw_.teamId] ?? 0) - (before.scoreByTeam[throw_.teamId] ?? 0);
+  return closing + points / pointsValue(target);
+}
+
+export function isScoringThrowCricket(
+  before: CricketEngineState,
+  after: CricketEngineState,
+  throw_: ThrowRecord,
+): boolean {
+  return countedMarksCricket(before, after, throw_) > 0;
+}

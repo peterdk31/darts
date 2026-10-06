@@ -1,8 +1,11 @@
 import type { Team, ThrowRecord } from "@/shared/types/core";
+import type { ThrowStep } from "@/shell/session/gameRunner";
 import type { X01EngineState } from "@/games/x01/engine";
+import { computeCheckout } from "@/games/x01/checkout";
 import type { CricketEngineState } from "@/games/cricket/engine";
-import { CRICKET_TARGETS } from "@/games/cricket/engine";
+import { CRICKET_TARGETS, countedMarksCricket } from "@/games/cricket/engine";
 import type { MickeyEngineState } from "@/games/mickey-mouse/engine";
+import { countedMarksMickey } from "@/games/mickey-mouse/engine";
 import type { ATCEngineState } from "@/games/around-the-clock/engine";
 import type { LumberjackEngineState } from "@/games/lumberjack/engine";
 import type { MinesweeperEngineState } from "@/games/minesweeper/engine";
@@ -13,15 +16,40 @@ export interface TeamRanking {
   label: string;
 }
 
+export interface X01PlayerStat {
+  /** Points scored (busted visits count 0) — 3-dart avg = points / darts × 3. */
+  points: number;
+  /** Visits scoring exactly 180. */
+  visits180: number;
+  /** Visits scoring 140–179. */
+  visits140: number;
+  /** Darts thrown with a one-dart finish available. */
+  checkoutDarts: number;
+  checkouts: number;
+  /** Largest finish (the remaining score at the start of the winning visit). */
+  highestCheckout: number;
+}
+
 export interface PlayerStat {
   playerId: string;
   teamId: string;
   dartsThrown: number;
+  /** Darts that gave points or progress (see GameManifest.isScoringThrow). */
   dartsHit: number;
+  x01?: X01PlayerStat;
+  /** Cricket / Mickey Mouse: marks counted — MPR = marks / darts × 3. */
+  marks?: number;
 }
+
+/**
+ * v2: dartsHit means "gave points or progress" (v1 counted any non-miss),
+ * plus per-player x01 and marks stats.
+ */
+export const WIN_SUMMARY_STATS_VERSION = 2;
 
 export interface WinSummary {
   _type: "win-summary";
+  statsVersion?: number;
   rankings: TeamRanking[];
   playerStats: PlayerStat[];
   totalDarts: number;
@@ -39,19 +67,32 @@ export function computeWinSummary(
   gameTypeId: string,
   teams: ReadonlyArray<Team>,
   winnerTeamIds: string[],
-  throws: ReadonlyArray<ThrowRecord>,
+  steps: ReadonlyArray<ThrowStep>,
   engineState: unknown,
 ): WinSummary {
+  const throws = steps.map((s) => s.throw_);
   const playerStats: PlayerStat[] = [];
   for (const team of teams) {
     for (const player of team.players) {
-      const pt = throws.filter((t) => t.playerId === player.id);
-      playerStats.push({
+      const ps = steps.filter((s) => s.throw_.playerId === player.id);
+      const stat: PlayerStat = {
         playerId: player.id,
         teamId: team.id,
-        dartsThrown: pt.length,
-        dartsHit: pt.filter((t) => t.segment !== "miss").length,
-      });
+        dartsThrown: ps.length,
+        dartsHit: ps.filter((s) => s.scoring).length,
+      };
+      if (gameTypeId === "x01") {
+        const x = x01PlayerStat(ps);
+        stat.x01 = x.stat;
+        stat.dartsHit = x.dartsHit;
+      } else if (gameTypeId === "cricket") {
+        stat.marks = sum(ps, (s) =>
+          countedMarksCricket(s.before as CricketEngineState, s.after as CricketEngineState, s.throw_));
+      } else if (gameTypeId === "mickey-mouse") {
+        stat.marks = sum(ps, (s) =>
+          countedMarksMickey(s.before as MickeyEngineState, s.after as MickeyEngineState, s.throw_));
+      }
+      playerStats.push(stat);
     }
   }
 
@@ -79,7 +120,70 @@ export function computeWinSummary(
       rankings = defaultRank(teams, winnerTeamIds);
   }
 
-  return { _type: "win-summary", rankings, playerStats, totalDarts: throws.length };
+  return {
+    _type: "win-summary",
+    statsVersion: WIN_SUMMARY_STATS_VERSION,
+    rankings,
+    playerStats,
+    totalDarts: throws.length,
+  };
+}
+
+function sum<T>(xs: ReadonlyArray<T>, f: (x: T) => number): number {
+  return xs.reduce((acc, x) => acc + f(x), 0);
+}
+
+/** Can `remaining` be finished with a single dart? */
+function isOneDartFinish(remaining: number, doubleOut: boolean): boolean {
+  if (doubleOut) return computeCheckout(remaining, 1, true) !== null;
+  return (
+    (remaining >= 1 && remaining <= 20) ||
+    remaining === 25 ||
+    remaining === 50 ||
+    (remaining <= 40 && remaining % 2 === 0) ||
+    (remaining <= 60 && remaining % 3 === 0)
+  );
+}
+
+/** `steps` are one player's darts, in order. */
+function x01PlayerStat(steps: ReadonlyArray<ThrowStep>): { stat: X01PlayerStat; dartsHit: number } {
+  const stat: X01PlayerStat = {
+    points: 0, visits180: 0, visits140: 0, checkoutDarts: 0, checkouts: 0, highestCheckout: 0,
+  };
+  let dartsHit = 0;
+
+  // Split into visits; a bust wipes the whole visit's score.
+  const visits: ThrowStep[][] = [];
+  for (const s of steps) {
+    if (s.visitStart || visits.length === 0) visits.push([]);
+    visits[visits.length - 1]!.push(s);
+  }
+
+  for (const visit of visits) {
+    const busted = visit.some((s) => s.effects.some((e) => e.kind === "bust"));
+    const won = visit.some((s) => s.effects.some((e) => e.kind === "gameWon"));
+    const points = busted
+      ? 0
+      : sum(visit, (s) => sum(s.effects, (e) => (e.kind === "scored" ? e.delta : 0)));
+    stat.points += points;
+    if (points === 180) stat.visits180++;
+    else if (points >= 140) stat.visits140++;
+    if (!busted) dartsHit += visit.filter((s) => s.scoring).length;
+    if (won) {
+      stat.checkouts++;
+      stat.highestCheckout = Math.max(stat.highestCheckout, points);
+    }
+
+    for (const s of visit) {
+      const st = s.before as X01EngineState;
+      const teamId = s.throw_.teamId;
+      const opened = !st.doubleIn || st.doubleInAchieved[teamId] === true;
+      if (opened && isOneDartFinish(st.scoreByTeam[teamId] ?? 0, st.doubleOut)) {
+        stat.checkoutDarts++;
+      }
+    }
+  }
+  return { stat, dartsHit };
 }
 
 function rankX01(

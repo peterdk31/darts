@@ -5,7 +5,14 @@ import { useSession } from "@/shell/session/useSession";
 import { SessionTally } from "@/shell/components/SessionTally";
 import { getById } from "@/games/registry";
 import type { Team } from "@/shared/types/core";
-import { isWinSummary, type WinSummary } from "@/shell/stats/computeWinSummary";
+import { isWinSummary, type PlayerStat, type WinSummary } from "@/shell/stats/computeWinSummary";
+import { mpr, percent, x01Line } from "@/shell/stats/formatStats";
+
+function gameStatsLine(ps: PlayerStat): string | null {
+  if (ps.x01) return x01Line({ ...ps.x01, darts: ps.dartsThrown });
+  if (ps.marks !== undefined) return `MPR ${mpr(ps.marks, ps.dartsThrown)}`;
+  return null;
+}
 import { getTeamLabel } from "@/shared/teams/teamLabel";
 import styles from "./GameEndPage.module.css";
 
@@ -153,18 +160,18 @@ function RichResults({
               {teamPlayers.map((ps) => {
                 const player = team.players.find((p) => p.id === ps.playerId);
                 if (!player) return null;
-                const pct =
-                  ps.dartsThrown > 0
-                    ? Math.round((100 * ps.dartsHit) / ps.dartsThrown)
-                    : 0;
+                const extra = gameStatsLine(ps);
                 return (
                   <li key={ps.playerId} className={styles.playerRow}>
                     <span className={styles.playerName}>
                       {player.displayName}
                     </span>
                     <span className={styles.playerStats}>
-                      {ps.dartsThrown} thrown &middot; {ps.dartsHit} hit ({pct}
-                      %)
+                      <span className={styles.playerStatsMain}>
+                        {ps.dartsThrown} thrown &middot; {ps.dartsHit} hit (
+                        {percent(ps.dartsHit, ps.dartsThrown)})
+                      </span>
+                      {extra && <span>{extra}</span>}
                     </span>
                   </li>
                 );

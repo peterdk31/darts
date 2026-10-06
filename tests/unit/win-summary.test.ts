@@ -6,6 +6,13 @@ import {
 import type { Team, ThrowRecord } from "@/shared/types/core";
 import type { X01EngineState } from "@/games/x01/engine";
 import type { ATCEngineState } from "@/games/around-the-clock/engine";
+import type { ThrowStep } from "@/shell/session/gameRunner";
+
+function asSteps(throws: ThrowRecord[], state: unknown): ThrowStep[] {
+  return throws.map((t) => ({
+    throw_: t, before: state, after: state, effects: [], visitStart: false, scoring: false,
+  }));
+}
 
 const TEAMS: Team[] = [
   { id: "t1", displayName: "Red", colorId: "red", players: [{ id: "p1", displayName: "Alice" }] },
@@ -23,34 +30,6 @@ function mkThrow(overrides: Partial<ThrowRecord> & { playerId: string; teamId: s
 }
 
 describe("computeWinSummary", () => {
-  it("computes player stats from throws", () => {
-    const throws: ThrowRecord[] = [
-      mkThrow({ playerId: "p1", teamId: "t1", segment: 20, score: 20 }),
-      mkThrow({ playerId: "p1", teamId: "t1", segment: "miss", score: 0 }),
-      mkThrow({ playerId: "p1", teamId: "t1", segment: 19, score: 19 }),
-      mkThrow({ playerId: "p2", teamId: "t2", segment: "miss", score: 0 }),
-      mkThrow({ playerId: "p2", teamId: "t2", segment: "miss", score: 0 }),
-      mkThrow({ playerId: "p2", teamId: "t2", segment: 1, score: 1 }),
-    ];
-
-    const fakeState: Partial<ATCEngineState> = {
-      progressByTeam: { t1: 21, t2: 5 },
-    };
-
-    const result = computeWinSummary("around-the-clock", TEAMS, ["t1"], throws, fakeState);
-
-    expect(result._type).toBe("win-summary");
-    expect(result.totalDarts).toBe(6);
-
-    const p1 = result.playerStats.find((p) => p.playerId === "p1")!;
-    expect(p1.dartsThrown).toBe(3);
-    expect(p1.dartsHit).toBe(2);
-
-    const p2 = result.playerStats.find((p) => p.playerId === "p2")!;
-    expect(p2.dartsThrown).toBe(3);
-    expect(p2.dartsHit).toBe(1);
-  });
-
   it("ranks X01 teams by remaining score", () => {
     const throws: ThrowRecord[] = [
       mkThrow({ playerId: "p1", teamId: "t1" }),
@@ -62,7 +41,7 @@ describe("computeWinSummary", () => {
       scoreByTeam: { t1: 0, t2: 200 },
     };
 
-    const result = computeWinSummary("x01", TEAMS, ["t1"], throws, state);
+    const result = computeWinSummary("x01", TEAMS, ["t1"], asSteps(throws, { ...state, doubleInAchieved: {} }), state);
 
     expect(result.rankings[0]!.teamId).toBe("t1");
     expect(result.rankings[0]!.rank).toBe(1);

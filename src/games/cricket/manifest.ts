@@ -1,6 +1,7 @@
 import type { GameManifest } from "@/shared/types/game-module";
 import { shanghaiSetting } from "@/shared/shanghai";
 import {
+  isScoringThrowCricket,
   applyThrowCricket,
   getBoardHintsCricket,
   getQuickInputsCricket,
@@ -23,5 +24,6 @@ export const cricketManifest: GameManifest<CricketEngineState> = {
   getTurnHint: getTurnHintCricket,
   getBoardHints: getBoardHintsCricket,
   getQuickInputs: getQuickInputsCricket,
+  isScoringThrow: isScoringThrowCricket,
   view: (props) => ScoreboardPanel(props),
 };

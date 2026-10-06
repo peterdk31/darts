@@ -171,5 +171,10 @@ export interface GameManifest<EngineState = unknown> {
     throw_: ThrowRecord,
   ): ReadonlyArray<{ intent: string; label: string }>;
   getQuickInputs?(state: EngineState): QuickInputGroup[] | null;
+  /**
+   * Did this dart give points or progress (counts as a "hit" in stats)?
+   * Defaults to: the throw produced a `scored` effect with a positive delta.
+   */
+  isScoringThrow?(before: EngineState, after: EngineState, throw_: ThrowRecord): boolean;
   migrate?(prior: { schemaVersion: number; state: unknown }): EngineState;
 }

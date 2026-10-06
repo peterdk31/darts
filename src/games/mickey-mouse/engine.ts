@@ -357,3 +357,24 @@ export function getQuickInputsMickey(
   groups.push({ actions: [{ label: "Miss", segment: "miss", multiplier: 1, score: 0, variant: "miss" }] });
   return groups;
 }
+
+/** Marks this dart added for its team (marks are clamped at 3 per target). */
+export function countedMarksMickey(
+  before: MickeyEngineState,
+  after: MickeyEngineState,
+  throw_: ThrowRecord,
+): number {
+  const b = before.marksByTeam[throw_.teamId] ?? {};
+  const a = after.marksByTeam[throw_.teamId] ?? {};
+  let marks = 0;
+  for (const tg of before.targets) marks += (a[String(tg)] ?? 0) - (b[String(tg)] ?? 0);
+  return marks;
+}
+
+export function isScoringThrowMickey(
+  before: MickeyEngineState,
+  after: MickeyEngineState,
+  throw_: ThrowRecord,
+): boolean {
+  return countedMarksMickey(before, after, throw_) > 0;
+}

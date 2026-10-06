@@ -218,7 +218,7 @@ describe("completedGameRecord", () => {
   it("captures the final engine state and throws-based summary", () => {
     let g = newGame(x01Manifest, x01Settings);
     g = play(g, makeThrow(g, 20, 3, 60));
-    const rec = completedGameRecord(g, ["A"]);
+    const rec = completedGameRecord(x01Manifest, g, ["A"]);
     expect(rec.finalEngineState).toBe(g.engineState);
     expect(rec.winnerTeamIds).toEqual(["A"]);
   });

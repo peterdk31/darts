@@ -1,5 +1,6 @@
 import type { GameManifest, SettingDefinition } from "@/shared/types/game-module";
 import {
+  isScoringThrowKiller,
   applyThrowKiller,
   getBoardHintsKiller,
   getQuickInputsKiller,
@@ -63,5 +64,6 @@ export const killerManifest: GameManifest<KillerEngineState> = {
   getTurnHint: getTurnHintKiller,
   getBoardHints: getBoardHintsKiller,
   getQuickInputs: getQuickInputsKiller,
+  isScoringThrow: isScoringThrowKiller,
   view: (props) => ScoreboardPanel(props),
 };
