@@ -12,6 +12,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png", "apple-touch-icon.png"],
       manifest: {
+        // Stable app identity, so Chrome doesn't derive it from start_url.
+        id: "/darts/?app=dart-game-tracker",
         name: "Dart Game Tracker",
         short_name: "Darts",
         description: "Score X01, Cricket, Killer and more at the dartboard — works offline.",
