@@ -63,10 +63,10 @@
   --board-number-fg: #ffffff;
   --board-segment-light: #f5e9c2;       /* cream */
   --board-segment-dark: #1a1a1a;        /* black */
-  --board-double-light: #f04444;        /* red */
-  --board-double-dark: #1f8a3b;         /* green */
-  --board-triple-light: #f04444;
-  --board-triple-dark: #1f8a3b;
+  --board-double-light: #1f8a3b;        /* green (on cream wedges) */
+  --board-double-dark: #f04444;         /* red (on black wedges) */
+  --board-triple-light: #1f8a3b;
+  --board-triple-dark: #f04444;
   --board-bull-outer: #1f8a3b;
   --board-bull-inner: #f04444;
   --board-miss-bg: #0a0a0a;
