@@ -6,6 +6,7 @@ import {
   ScoreSummary,
 } from "@/shared/components/CollapsibleScoreboard";
 import type { MinesweeperEngineState } from "../engine";
+import { MineLog } from "./MineLog";
 import styles from "./ScoreboardPanel.module.css";
 
 interface Props {
@@ -44,9 +45,11 @@ export function ScoreboardPanel({ state, teams, scoreboardExpanded }: Props) {
         />
       }
     >
-      <div className={styles.roundBadge}>
-        Round {state.round} — {safeCount} safe · {state.mines.length} mines
-      </div>
+      {state.status === "in-progress" && (
+        <div className={styles.roundBadge}>
+          Round {state.round} — {safeCount} safe · {state.mines.length} mines
+        </div>
+      )}
 
       <div className={styles.cards}>
         {teams.map((t) => {
@@ -93,6 +96,8 @@ export function ScoreboardPanel({ state, teams, scoreboardExpanded }: Props) {
           );
         })}
       </div>
+
+      {state.status === "won" && <MineLog state={state} teams={teams} />}
     </CollapsibleScoreboard>
   );
 }

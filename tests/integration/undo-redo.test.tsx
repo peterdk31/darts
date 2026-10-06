@@ -1,21 +1,20 @@
 import { describe, it, expect } from "vitest";
 import {
-  initialSessionState,
-  sessionReducer,
-  type SessionAction,
-} from "@/shell/session/sessionReducer";
-import {
-  applyOne,
-  initialCurrentTurn,
-  makeInitContext,
-  replayAll,
-} from "@/shell/session/replay";
+  completedGameRecord,
+  createGame,
+  recordThrow,
+  redoThrow,
+  replayGame,
+  undoThrow,
+} from "@/shell/session/gameRunner";
 import type { InProgressGame } from "@/shell/session/types";
 import { x01Manifest } from "@/games/x01/manifest";
-import type { GameManifest } from "@/shared/types/game-module";
+import { minesweeperManifest } from "@/games/minesweeper/manifest";
+import { killerManifest } from "@/games/killer/manifest";
+import type { MinesweeperEngineState } from "@/games/minesweeper/engine";
+import type { KillerEngineState } from "@/games/killer/engine";
+import type { GameManifest, ResolvedSettings } from "@/shared/types/game-module";
 import type { Team, ThrowRecord } from "@/shared/types/core";
-
-const manifest = x01Manifest as unknown as GameManifest;
 
 function makeTeams(): Team[] {
   return [
@@ -34,16 +33,30 @@ function makeTeams(): Team[] {
   ];
 }
 
+function newGame(
+  manifest: GameManifest<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+  resolvedSettings: ResolvedSettings,
+  id = "g1",
+): InProgressGame {
+  return createGame(manifest, {
+    id,
+    teams: makeTeams(),
+    resolvedSettings,
+    startedAt: new Date(0).toISOString(),
+  });
+}
+
+const x01Settings = { startingScore: "501", doubleOut: false, doubleIn: false };
+
 function makeThrow(
-  teamId: string,
-  playerId: string,
+  game: InProgressGame,
   segment: ThrowRecord["segment"],
   multiplier: 1 | 2 | 3,
   score: number,
 ): ThrowRecord {
   return {
-    teamId,
-    playerId,
+    teamId: game.currentTurn.teamId,
+    playerId: game.currentTurn.playerId,
     segment,
     multiplier,
     score,
@@ -51,165 +64,162 @@ function makeThrow(
   };
 }
 
-function bootstrapGame(): InProgressGame {
-  const teams = makeTeams();
-  const turnOrder = ["A", "B"];
-  const playerRotation: Record<string, string[]> = { A: ["A1"], B: ["B1"] };
-  const dartsPerPlayer = 3;
-  const teamMax = 1;
-  const resolvedSettings = { startingScore: "501", doubleOut: false, doubleIn: false };
-  const initCtx = makeInitContext(teams, resolvedSettings, dartsPerPlayer, teamMax);
-  const engineState = manifest.init(initCtx);
-  return {
-    id: "g1",
-    gameTypeId: manifest.id,
-    resolvedSettings,
-    teams,
-    dartsPerPlayer,
-    maxTeamSize: teamMax,
-    turnOrder,
-    playerRotation,
-    throws: [],
-    redoStack: [],
-    engineState,
-    engineSchemaVersion: manifest.schemaVersion,
-    currentTurn: initialCurrentTurn(turnOrder, playerRotation),
-    status: "in-progress",
-    startedAt: new Date(0).toISOString(),
-  };
+function play(
+  game: InProgressGame,
+  t: ThrowRecord,
+  manifest: GameManifest<any> = x01Manifest, // eslint-disable-line @typescript-eslint/no-explicit-any
+): InProgressGame {
+  return recordThrow(manifest, game, t).game;
 }
 
-// Mirrors PlayPage.handleThrow logic at the reducer level.
-function dispatchThrow(
-  state: ReturnType<typeof sessionReducer>,
-  throw_: ThrowRecord,
-): ReturnType<typeof sessionReducer> {
-  const game = state.inProgressGame!;
-  const r = applyOne(manifest, game.engineState, game.currentTurn, throw_);
-  const action: SessionAction = {
-    type: "appendThrow",
-    throw_,
-    engineState: r.state,
-    currentTurn: r.turn,
-  };
-  return sessionReducer(state, action);
-}
-
-// Mirrors PlayPage.handleUndo (replay-from-init through n-1 throws).
-function dispatchUndo(
-  state: ReturnType<typeof sessionReducer>,
-): ReturnType<typeof sessionReducer> {
-  const game = state.inProgressGame!;
-  if (game.throws.length === 0) return state;
-  const initCtx = makeInitContext(
-    game.teams,
-    game.resolvedSettings,
-    game.dartsPerPlayer,
-    game.maxTeamSize,
-  );
-  const newThrows = game.throws.slice(0, -1);
-  const replay = replayAll(
-    manifest,
-    initCtx,
-    game.turnOrder,
-    game.playerRotation,
-    newThrows,
-  );
-  return sessionReducer(state, {
-    type: "popThrow",
-    engineState: replay.engineState,
-    currentTurn: replay.currentTurn,
-  });
-}
-
-// Mirrors PlayPage.handleRedo (pops top of redoStack, replays full throws+1).
-function dispatchRedo(
-  state: ReturnType<typeof sessionReducer>,
-): ReturnType<typeof sessionReducer> {
-  const game = state.inProgressGame!;
-  if (game.redoStack.length === 0) return state;
-  const popped = game.redoStack[game.redoStack.length - 1]!;
-  const initCtx = makeInitContext(
-    game.teams,
-    game.resolvedSettings,
-    game.dartsPerPlayer,
-    game.maxTeamSize,
-  );
-  const newThrows = [...game.throws, popped];
-  const replay = replayAll(
-    manifest,
-    initCtx,
-    game.turnOrder,
-    game.playerRotation,
-    newThrows,
-  );
-  return sessionReducer(state, {
-    type: "popRedo",
-    engineState: replay.engineState,
-    currentTurn: replay.currentTurn,
-  });
-}
-
-describe("undo/redo (Iteration 3)", () => {
+describe("undo/redo", () => {
   it("walks back through three throws to the exact pre-throw state", () => {
-    const game = bootstrapGame();
-    let s = sessionReducer(initialSessionState, { type: "setInProgressGame", game });
-    const baselineState = s.inProgressGame!.engineState;
-    const baselineTurn = s.inProgressGame!.currentTurn;
+    const baseline = newGame(x01Manifest, x01Settings);
+    let g = baseline;
+    g = play(g, makeThrow(g, 20, 3, 60));
+    g = play(g, makeThrow(g, 20, 1, 20));
+    g = play(g, makeThrow(g, 19, 1, 19));
+    expect(g.throws).toHaveLength(3);
+    expect(g.engineState).not.toEqual(baseline.engineState);
 
-    s = dispatchThrow(s, makeThrow("A", "A1", 20, 3, 60));
-    s = dispatchThrow(s, makeThrow("A", "A1", 20, 1, 20));
-    s = dispatchThrow(s, makeThrow("A", "A1", 19, 1, 19));
-    expect(s.inProgressGame!.throws).toHaveLength(3);
-    expect(s.inProgressGame!.engineState).not.toEqual(baselineState);
+    g = undoThrow(x01Manifest, g)!;
+    g = undoThrow(x01Manifest, g)!;
+    g = undoThrow(x01Manifest, g)!;
 
-    s = dispatchUndo(s);
-    s = dispatchUndo(s);
-    s = dispatchUndo(s);
-
-    expect(s.inProgressGame!.throws).toHaveLength(0);
-    expect(s.inProgressGame!.engineState).toEqual(baselineState);
-    expect(s.inProgressGame!.currentTurn).toEqual(baselineTurn);
-    expect(s.inProgressGame!.redoStack).toHaveLength(3);
+    expect(g.throws).toHaveLength(0);
+    expect(g.engineState).toEqual(baseline.engineState);
+    expect(g.currentTurn).toEqual(baseline.currentTurn);
+    expect(g.redoStack).toHaveLength(3);
+    expect(undoThrow(x01Manifest, g)).toBeNull();
   });
 
   it("redo reapplies undone throws in original order", () => {
-    const game = bootstrapGame();
-    let s = sessionReducer(initialSessionState, { type: "setInProgressGame", game });
+    let g = newGame(x01Manifest, x01Settings);
+    const t1 = makeThrow(g, 20, 3, 60);
+    g = play(g, t1);
+    const t2 = makeThrow(g, 20, 1, 20);
+    g = play(g, t2);
+    const afterTwo = g;
+    const t3 = makeThrow(g, 19, 1, 19);
+    g = play(g, t3);
 
-    const t1 = makeThrow("A", "A1", 20, 3, 60);
-    const t2 = makeThrow("A", "A1", 20, 1, 20);
-    const t3 = makeThrow("A", "A1", 19, 1, 19);
-    s = dispatchThrow(s, t1);
-    s = dispatchThrow(s, t2);
-    s = dispatchThrow(s, t3);
-    const stateAfterAllThrows = s.inProgressGame!.engineState;
+    g = undoThrow(x01Manifest, g)!;
+    g = undoThrow(x01Manifest, g)!;
+    g = undoThrow(x01Manifest, g)!;
 
-    s = dispatchUndo(s);
-    s = dispatchUndo(s);
-    s = dispatchUndo(s);
+    g = redoThrow(x01Manifest, g)!.game;
+    g = redoThrow(x01Manifest, g)!.game;
 
-    s = dispatchRedo(s);
-    s = dispatchRedo(s);
-
-    expect(s.inProgressGame!.throws).toHaveLength(2);
-    expect(s.inProgressGame!.throws[0]).toEqual(t1);
-    expect(s.inProgressGame!.throws[1]).toEqual(t2);
-    expect(s.inProgressGame!.redoStack).toHaveLength(1);
-    expect(s.inProgressGame!.redoStack[0]).toEqual(t3);
-    expect(s.inProgressGame!.engineState).not.toEqual(stateAfterAllThrows);
+    expect(g.throws).toEqual([t1, t2]);
+    expect(g.redoStack).toEqual([t3]);
+    expect(g.engineState).toEqual(afterTwo.engineState);
+    expect(g.currentTurn).toEqual(afterTwo.currentTurn);
   });
 
   it("recording a new throw clears redoStack (FR-024)", () => {
-    const game = bootstrapGame();
-    let s = sessionReducer(initialSessionState, { type: "setInProgressGame", game });
+    let g = newGame(x01Manifest, x01Settings);
+    g = play(g, makeThrow(g, 20, 3, 60));
+    g = play(g, makeThrow(g, 20, 1, 20));
+    g = undoThrow(x01Manifest, g)!;
+    expect(g.redoStack).toHaveLength(1);
 
-    s = dispatchThrow(s, makeThrow("A", "A1", 20, 3, 60));
-    s = dispatchThrow(s, makeThrow("A", "A1", 20, 1, 20));
-    s = dispatchUndo(s);
-    expect(s.inProgressGame!.redoStack).toHaveLength(1);
+    g = play(g, makeThrow(g, 5, 1, 5));
+    expect(g.redoStack).toHaveLength(0);
+  });
 
-    s = dispatchThrow(s, makeThrow("A", "A1", 5, 1, 5));
-    expect(s.inProgressGame!.redoStack).toHaveLength(0);
+  it("redo of the winning throw reports the win", () => {
+    let g = newGame(x01Manifest, { startingScore: "301", doubleOut: false, doubleIn: false });
+    // A: 180 ×1, then 121 → finish on the next turn.
+    const darts: Array<[number | "inner-bull", 1 | 2 | 3, number]> = [
+      [20, 3, 60], [20, 3, 60], [20, 3, 60], // A → 121
+      [1, 1, 1], [1, 1, 1], [1, 1, 1],       // B
+      [20, 3, 60], [20, 3, 60],              // A → 1
+    ];
+    for (const [seg, mul, score] of darts) g = play(g, makeThrow(g, seg, mul, score));
+    const win = recordThrow(x01Manifest, g, makeThrow(g, 1, 1, 1));
+    expect(win.winnerTeamIds).toEqual(["A"]);
+
+    const undone = undoThrow(x01Manifest, win.game)!;
+    const redone = redoThrow(x01Manifest, undone)!;
+    expect(redone.winnerTeamIds).toEqual(["A"]);
+    expect(redone.game.engineState).toEqual(win.game.engineState);
+  });
+});
+
+describe("shanghai", () => {
+  const settings = { startingScore: "501", doubleOut: false, doubleIn: false, shanghai: true };
+
+  function shanghai(g: InProgressGame): InProgressGame {
+    g = play(g, makeThrow(g, 20, 1, 20));
+    return play(g, makeThrow(g, 20, 2, 40));
+  }
+
+  it("wins on single/double/triple of one number", () => {
+    const g = shanghai(newGame(x01Manifest, settings));
+    const r = recordThrow(x01Manifest, g, makeThrow(g, 20, 3, 60));
+    expect(r.winnerTeamIds).toEqual(["A"]);
+    expect(r.effects.some((e) => e.kind === "gameWon")).toBe(true);
+  });
+
+  it("is detected on redo and on replay, not just live", () => {
+    const g = shanghai(newGame(x01Manifest, settings));
+    const won = recordThrow(x01Manifest, g, makeThrow(g, 20, 3, 60)).game;
+
+    const redone = redoThrow(x01Manifest, undoThrow(x01Manifest, won)!)!;
+    expect(redone.winnerTeamIds).toEqual(["A"]);
+    expect(replayGame(x01Manifest, won).winnerTeamIds).toEqual(["A"]);
+  });
+
+  it("does nothing when the setting is off", () => {
+    let g = newGame(x01Manifest, x01Settings);
+    g = shanghai(g);
+    expect(recordThrow(x01Manifest, g, makeThrow(g, 20, 3, 60)).winnerTeamIds).toBeNull();
+  });
+});
+
+describe("randomised games survive undo", () => {
+  it("minesweeper keeps the same mines when undoing across a round change", () => {
+    const settings = { maxLives: 3, startingMines: 3, mineIncrement: 1 };
+    let g = newGame(minesweeperManifest, settings);
+    for (let i = 0; i < 6; i++) g = play(g, makeThrow(g, "miss", 1, 0), minesweeperManifest);
+    const round2 = g.engineState as MinesweeperEngineState;
+    expect(round2.round).toBe(2);
+
+    g = play(g, makeThrow(g, "miss", 1, 0), minesweeperManifest);
+    g = undoThrow(minesweeperManifest, g)!;
+    g = undoThrow(minesweeperManifest, g)!;
+    g = redoThrow(minesweeperManifest, g)!.game;
+
+    expect((g.engineState as MinesweeperEngineState).mines).toEqual(round2.mines);
+    expect((g.engineState as MinesweeperEngineState).mineHistory).toEqual(round2.mineHistory);
+  });
+
+  it("killer keeps the same random numbers after undo", () => {
+    const settings = { numberSelection: "random", targets: "all", killerStraightOff: false, maxLives: 0 };
+    let g = newGame(killerManifest, settings);
+    const before = (g.engineState as KillerEngineState).assignments;
+    g = play(g, makeThrow(g, 1, 1, 1), killerManifest);
+    g = undoThrow(killerManifest, g)!;
+    expect((g.engineState as KillerEngineState).assignments).toEqual(before);
+  });
+
+  it("different games get different mines", () => {
+    const settings = { maxLives: 3, startingMines: 5, mineIncrement: 1 };
+    const mines = new Set(
+      ["g1", "g2", "g3", "g4"].map((id) =>
+        (newGame(minesweeperManifest, settings, id).engineState as MinesweeperEngineState).mines.join(),
+      ),
+    );
+    expect(mines.size).toBeGreaterThan(1);
+  });
+});
+
+describe("completedGameRecord", () => {
+  it("captures the final engine state and throws-based summary", () => {
+    let g = newGame(x01Manifest, x01Settings);
+    g = play(g, makeThrow(g, 20, 3, 60));
+    const rec = completedGameRecord(g, ["A"]);
+    expect(rec.finalEngineState).toBe(g.engineState);
+    expect(rec.winnerTeamIds).toEqual(["A"]);
   });
 });

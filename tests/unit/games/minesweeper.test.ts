@@ -11,6 +11,7 @@ import {
   type MinesweeperEngineState,
 } from "@/games/minesweeper/engine";
 import type { Team, ThrowRecord } from "@/shared/types/core";
+import { gameRandom } from "@/shared/random";
 import type { InitContext } from "@/shared/types/game-module";
 
 function makeThreeTeams(): Team[] {
@@ -65,6 +66,7 @@ function ctx(
       mineIncrement: 1,
       ...overrides,
     },
+    random: gameRandom("test", "init"),
     helpers: { teamAllotment: () => 3, allotmentForPlayer: () => 3 },
   };
 }
@@ -100,7 +102,7 @@ function throwAt(
     multiplier,
     score,
     timestamp: "t",
-  }).state;
+  }, { random: Math.random }).state;
 }
 
 function throwResult(
@@ -117,7 +119,7 @@ function throwResult(
     multiplier,
     score,
     timestamp: "t",
-  });
+  }, { random: Math.random });
 }
 
 // ---------------------------------------------------------------------------
@@ -126,24 +128,24 @@ function throwResult(
 
 describe("minesweeper – generateMines", () => {
   it("generates the correct number of mines", () => {
-    const mines = generateMines(1, 3, 1);
+    const mines = generateMines(1, 3, 1, Math.random);
     expect(mines).toHaveLength(3);
   });
 
   it("mines grow each round", () => {
-    const m1 = generateMines(1, 3, 1);
-    const m3 = generateMines(3, 3, 1);
+    const m1 = generateMines(1, 3, 1, Math.random);
+    const m3 = generateMines(3, 3, 1, Math.random);
     expect(m3.length).toBeGreaterThan(m1.length);
   });
 
   it("mine count caps at 20", () => {
-    const mines = generateMines(100, 3, 5);
+    const mines = generateMines(100, 3, 5, Math.random);
     expect(mines).toHaveLength(20);
   });
 
   it("all mines are valid board numbers", () => {
     for (let round = 1; round <= 10; round++) {
-      const mines = generateMines(round, 3, 1);
+      const mines = generateMines(round, 3, 1, Math.random);
       for (const m of mines) {
         expect(m).toBeGreaterThanOrEqual(1);
         expect(m).toBeLessThanOrEqual(20);
@@ -301,29 +303,51 @@ describe("minesweeper engine – elimination", () => {
     expect(activeIds(s).teamId).toBe("B");
   });
 
-  it("last player standing wins", () => {
-    const s = withMines(
+  it("last player standing keeps playing and scoring", () => {
+    let s = withMines(
       initMinesweeper(ctx(makeTwoTeams(), { maxLives: 1 })),
       [5],
     );
-    const r = throwResult(s, 5, 1, 5);
+    s = throwAt(s, 5, 1, 5);
+    expect(s.status).toBe("in-progress");
+    expect(activeIds(s).teamId).toBe("B");
+
+    s = throwAt(s, 20, 1, 20);
+    s = throwAt(s, 20, 1, 20);
+    s = throwAt(s, 20, 1, 20);
+    expect(s.scores["B"]).toBe(60);
+    expect(s.status).toBe("in-progress");
+    // A is skipped, so B starts the next round.
+    expect(activeIds(s).teamId).toBe("B");
+    expect(s.round).toBe(2);
+  });
+
+  it("game ends when every team is out of lives; highest score wins", () => {
+    let s = withMines(
+      initMinesweeper(ctx(makeTwoTeams(), { maxLives: 1 })),
+      [5],
+    );
+    s = throwAt(s, 20, 1, 20);
+    s = throwAt(s, 5, 1, 5); // A out with 20
+    s = throwAt(s, 1, 1, 1);
+    s = throwAt(s, 1, 1, 1);
+    s = throwAt(s, 1, 1, 1);
+    s = withMines(s, [7]);
+    const r = throwResult(s, 7, 1, 7); // B out with 3
     expect(r.state.status).toBe("won");
-    expect(r.state.winnerTeamIds).toEqual(["B"]);
+    expect(r.state.winnerTeamIds).toEqual(["A"]);
     expect(r.effects.some((e) => e.kind === "gameWon")).toBe(true);
   });
 
-  it("when two players are eliminated, last standing wins", () => {
+  it("tied top scores share the win", () => {
     let s = withMines(
-      initMinesweeper(ctx(makeThreeTeams(), { maxLives: 1 })),
-      [5, 10],
+      initMinesweeper(ctx(makeTwoTeams(), { maxLives: 1 })),
+      [5],
     );
     s = throwAt(s, 5, 1, 5);
-    expect(s.eliminatedTeamIds).toContain("A");
-    expect(s.status).toBe("in-progress");
-
-    const r = throwResult(s, 10, 1, 10);
+    const r = throwResult(s, 5, 1, 5);
     expect(r.state.status).toBe("won");
-    expect(r.state.winnerTeamIds).toEqual(["C"]);
+    expect(r.state.winnerTeamIds).toEqual(["A", "B"]);
   });
 });
 
@@ -354,6 +378,17 @@ describe("minesweeper engine – round progression", () => {
     for (let i = 0; i < 6; i++) s = throwAt(s, "miss", 1, 0);
     expect(s.round).toBe(2);
     expect(s.mines).toHaveLength(3);
+  });
+
+  it("round advances when the first team in order is eliminated", () => {
+    let s = withMines(
+      initMinesweeper(ctx(makeThreeTeams(), { maxLives: 1 })),
+      [5],
+    );
+    s = throwAt(s, 5, 1, 5); // A out
+    for (let i = 0; i < 6; i++) s = throwAt(s, "miss", 1, 0); // B, C
+    expect(s.round).toBe(2);
+    expect(activeIds(s).teamId).toBe("B");
   });
 });
 
@@ -438,6 +473,7 @@ describe("minesweeper engine – quick inputs", () => {
       [5],
     );
     s = throwAt(s, 5, 1, 5);
+    s = throwAt(s, 5, 1, 5);
     expect(getQuickInputsMinesweeper(s)).toBeNull();
   });
 });
@@ -477,6 +513,7 @@ describe("minesweeper engine – won state", () => {
       [5],
     );
     s = throwAt(s, 5, 1, 5);
+    s = throwAt(s, 5, 1, 5);
     const r = throwResult(s, 10, 1, 10);
     expect(r.effects).toEqual([]);
     expect(r.state).toBe(s);
@@ -486,6 +523,32 @@ describe("minesweeper engine – won state", () => {
 // ---------------------------------------------------------------------------
 // Full game scenario
 // ---------------------------------------------------------------------------
+
+describe("minesweeper engine – mine history", () => {
+  it("records every round's mines and who hit them", () => {
+    let s = initMinesweeper(ctx(makeTwoTeams(), { maxLives: 1 }));
+    expect(s.mineHistory).toEqual([{ round: 1, mines: s.mines, hits: [] }]);
+
+    const mineA = s.mines[0]!;
+    s = throwAt(s, mineA, 1, mineA); // A out
+    expect(s.mineHistory[0]!.hits).toEqual([
+      { teamId: "A", playerId: "A1", segment: mineA },
+    ]);
+
+    for (let i = 0; i < 3; i++) s = throwAt(s, "miss", 1, 0); // B
+    expect(s.round).toBe(2);
+    expect(s.mineHistory).toHaveLength(2);
+    expect(s.mineHistory[1]).toEqual({ round: 2, mines: s.mines, hits: [] });
+
+    const mineB = s.mines[0]!;
+    s = throwAt(s, mineB, 1, mineB);
+    expect(s.status).toBe("won");
+    expect(s.mineHistory).toHaveLength(2);
+    expect(s.mineHistory[1]!.hits).toEqual([
+      { teamId: "B", playerId: "B1", segment: mineB },
+    ]);
+  });
+});
 
 describe("minesweeper engine – full game", () => {
   it("plays a complete 2-player game with mine progression", () => {
@@ -520,8 +583,23 @@ describe("minesweeper engine – full game", () => {
     s = throwAt(s, 3, 1, 3);
     expect(s.lives["A"]).toBe(1);
 
-    // B: mine 7 (bust, eliminated → A wins)
-    const r = throwResult(s, 7, 1, 7);
+    // B: mine 7 (bust, eliminated — A still has a life, so play goes on)
+    s = throwAt(s, 7, 1, 7);
+    expect(s.eliminatedTeamIds).toEqual(["B"]);
+    expect(s.status).toBe("in-progress");
+
+    // Round 3: A plays alone and keeps harvesting points
+    expect(s.round).toBe(3);
+    s = withMines(s, [1, 2, 3, 4]);
+    s = throwAt(s, 20, 3, 60);
+    s = throwAt(s, 20, 3, 60);
+    s = throwAt(s, 20, 3, 60);
+    expect(s.scores["A"]).toBe(240);
+    expect(activeIds(s).teamId).toBe("A");
+
+    // A: mine → out of lives, game over, A wins on points
+    s = withMines(s, [1, 2, 3, 4, 5]);
+    const r = throwResult(s, 1, 1, 1);
     expect(r.state.status).toBe("won");
     expect(r.state.winnerTeamIds).toEqual(["A"]);
   });

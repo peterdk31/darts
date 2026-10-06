@@ -7,8 +7,10 @@ import type {
   QuickInputAction,
   QuickInputGroup,
   ScoreboardSummary,
+  ThrowContext,
   ThrowEffect,
 } from "@/shared/types/game-module";
+import { shuffle, type RandomFn } from "@/shared/random";
 import {
   advance,
   initialPointer,
@@ -21,6 +23,13 @@ import {
 export const BOARD_ORDER: number[] = [
   20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5,
 ];
+
+export interface MineRound {
+  round: number;
+  mines: number[];
+  /** Mines that were hit this round, in throw order. */
+  hits: { teamId: string; playerId: string; segment: number }[];
+}
 
 export interface MinesweeperEngineState {
   teams: Team[];
@@ -35,6 +44,8 @@ export interface MinesweeperEngineState {
 
   /** Segments that are mines this round. */
   mines: number[];
+  /** Every round played so far, including the current one. */
+  mineHistory: MineRound[];
   /** teamId → current score. */
   scores: Record<string, number>;
   /** teamId → remaining lives. */
@@ -42,6 +53,7 @@ export interface MinesweeperEngineState {
   eliminatedTeamIds: string[];
 
   pointer: TurnPointer;
+  /** "won" once every team has run out of lives. */
   status: "in-progress" | "won";
   winnerTeamIds: string[] | null;
 }
@@ -54,20 +66,22 @@ export function generateMines(
   round: number,
   startingMines: number,
   mineIncrement: number,
+  random: RandomFn,
 ): number[] {
   const mineCount = Math.min(
     startingMines + (round - 1) * mineIncrement,
     20,
   );
-
-  const shuffled = [...BOARD_ORDER];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
-  }
-  return shuffled.slice(0, mineCount).sort((a, b) => a - b);
+  return shuffle(BOARD_ORDER, random)
+    .slice(0, mineCount)
+    .sort((a, b) => a - b);
 }
 
+/**
+ * Advance past eliminated teams. `wrapped` is true when the pointer passed
+ * the end of the turn order, i.e. a new round has started — even when the
+ * first team in the order is eliminated and gets skipped.
+ */
 function advanceSkipping(
   pointer: TurnPointer,
   turnOrder: string[],
@@ -76,21 +90,16 @@ function advanceSkipping(
   mts: number,
   bust: boolean,
   shouldSkip: (teamId: string) => boolean,
-): TurnAdvanceResult {
+): TurnAdvanceResult & { wrapped: boolean } {
   let result = advance(pointer, turnOrder, teams, dartsPerPlayer, mts, bust);
+  let wrapped = result.teamChanged && result.pointer.teamIdx <= pointer.teamIdx;
   let safety = turnOrder.length;
   while (shouldSkip(result.nextTeamId) && safety-- > 0) {
+    const prevIdx = result.pointer.teamIdx;
     result = advance(result.pointer, turnOrder, teams, dartsPerPlayer, mts, true);
+    if (result.pointer.teamIdx <= prevIdx) wrapped = true;
   }
-  return result;
-}
-
-function isNewRound(pointer: TurnPointer): boolean {
-  return (
-    pointer.teamIdx === 0 &&
-    pointer.playerIdxInTeam === 0 &&
-    pointer.dartsThrownThisStretch === 0
-  );
+  return { ...result, wrapped };
 }
 
 // ---------------------------------------------------------------------------
@@ -111,7 +120,7 @@ export function initMinesweeper(ctx: InitContext): MinesweeperEngineState {
     lives[t.id] = maxLives;
   }
 
-  const mines = generateMines(1, startingMines, mineIncrement);
+  const mines = generateMines(1, startingMines, mineIncrement, ctx.random);
 
   return {
     teams,
@@ -123,6 +132,7 @@ export function initMinesweeper(ctx: InitContext): MinesweeperEngineState {
     mineIncrement,
     maxLives,
     mines,
+    mineHistory: [{ round: 1, mines, hits: [] }],
     scores,
     lives,
     eliminatedTeamIds: [],
@@ -139,6 +149,7 @@ export function initMinesweeper(ctx: InitContext): MinesweeperEngineState {
 export function applyThrowMinesweeper(
   state: MinesweeperEngineState,
   throw_: ThrowRecord,
+  ctx: ThrowContext,
 ): ApplyThrowResult<MinesweeperEngineState> {
   if (state.status === "won") return { state, effects: [] };
 
@@ -148,6 +159,7 @@ export function applyThrowMinesweeper(
   let newScores = state.scores;
   let newLives = state.lives;
   let newEliminated = state.eliminatedTeamIds;
+  let newHistory = state.mineHistory;
 
   const seg = throw_.segment;
   const isMine = typeof seg === "number" && state.mines.includes(seg);
@@ -155,6 +167,11 @@ export function applyThrowMinesweeper(
   if (isMine) {
     const remaining = (state.lives[currentTeamId] ?? 0) - 1;
     newLives = { ...state.lives, [currentTeamId]: remaining };
+    newHistory = recordHit(state.mineHistory, state.round, state.mines, {
+      teamId: currentTeamId,
+      playerId: throw_.playerId,
+      segment: seg as number,
+    });
     effects.push({
       kind: "bust",
       teamId: currentTeamId,
@@ -175,12 +192,9 @@ export function applyThrowMinesweeper(
     effects.push({ kind: "scored", teamId: currentTeamId, delta: 0 });
   }
 
-  const activeIds = state.teams
-    .map((t) => t.id)
-    .filter((id) => !newEliminated.includes(id));
-
-  if (activeIds.length <= 1) {
-    const winnerIds = activeIds.length === 1 ? activeIds : bestScoreTeams(newScores, state.teams);
+  // The game runs until every team is out of lives; highest score wins.
+  if (newEliminated.length >= state.teams.length) {
+    const winnerIds = bestScoreTeams(newScores, state.teams);
     effects.push({ kind: "gameWon", winnerTeamIds: winnerIds });
     return {
       state: {
@@ -188,6 +202,7 @@ export function applyThrowMinesweeper(
         scores: newScores,
         lives: newLives,
         eliminatedTeamIds: newEliminated,
+        mineHistory: newHistory,
         status: "won",
         winnerTeamIds: winnerIds,
       },
@@ -207,9 +222,15 @@ export function applyThrowMinesweeper(
 
   let newRound = state.round;
   let newMines = state.mines;
-  if (isNewRound(adv.pointer)) {
+  if (adv.wrapped) {
     newRound = state.round + 1;
-    newMines = generateMines(newRound, state.startingMines, state.mineIncrement);
+    newMines = generateMines(
+      newRound,
+      state.startingMines,
+      state.mineIncrement,
+      ctx.random,
+    );
+    newHistory = [...newHistory, { round: newRound, mines: newMines, hits: [] }];
   }
 
   if (
@@ -229,12 +250,26 @@ export function applyThrowMinesweeper(
       scores: newScores,
       lives: newLives,
       eliminatedTeamIds: newEliminated,
+      mineHistory: newHistory,
       pointer: adv.pointer,
       round: newRound,
       mines: newMines,
     },
     effects,
   };
+}
+
+function recordHit(
+  history: MineRound[],
+  round: number,
+  mines: number[],
+  hit: MineRound["hits"][number],
+): MineRound[] {
+  const last = history[history.length - 1];
+  if (last && last.round === round) {
+    return [...history.slice(0, -1), { ...last, hits: [...last.hits, hit] }];
+  }
+  return [...history, { round, mines, hits: [hit] }];
 }
 
 function bestScoreTeams(

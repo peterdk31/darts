@@ -9,6 +9,7 @@ import {
   type MinesweeperEngineState,
 } from "./engine";
 import { ScoreboardPanel } from "./ui/ScoreboardPanel";
+import { MineLog } from "./ui/MineLog";
 
 const settings: SettingDefinition[] = [
   {
@@ -39,7 +40,7 @@ export const minesweeperManifest: GameManifest<MinesweeperEngineState> = {
   displayName: "Minesweeper",
   dartsPerPlayer: 3,
   settingsSchema: settings,
-  schemaVersion: 3,
+  schemaVersion: 4,
   init: initMinesweeper,
   applyThrow: applyThrowMinesweeper,
   selectScoreboard: selectScoreboardMinesweeper,
@@ -47,4 +48,5 @@ export const minesweeperManifest: GameManifest<MinesweeperEngineState> = {
   getBoardHints: getBoardHintsMinesweeper,
   getQuickInputs: getQuickInputsMinesweeper,
   view: (props) => ScoreboardPanel(props),
+  resultsView: (props) => MineLog(props),
 };

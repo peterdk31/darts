@@ -5,6 +5,7 @@ import {
   type CricketEngineState,
 } from "@/games/cricket/engine";
 import type { Team, ThrowRecord } from "@/shared/types/core";
+import { gameRandom } from "@/shared/random";
 import type { InitContext } from "@/shared/types/game-module";
 
 function makeTeams(): Team[] {
@@ -28,6 +29,7 @@ function ctx(teams: Team[]): InitContext {
   return {
     teams,
     resolvedSettings: {},
+    random: gameRandom("test", "init"),
     helpers: { teamAllotment: () => 3, allotmentForPlayer: () => 3 },
   };
 }

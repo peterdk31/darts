@@ -12,16 +12,17 @@ import { Button } from "@/shared/components/Button";
 import { useNavigate } from "@/shared/routing/router";
 import { useSession } from "@/shell/session/useSession";
 import { getById } from "@/games/registry";
-import { applyOne, makeInitContext, replayAll } from "@/shell/session/replay";
-import type {
-  CompletedGameRecord,
-  InProgressGame,
-} from "@/shell/session/types";
+import {
+  completedGameRecord,
+  recordThrow,
+  redoThrow,
+  replayGame,
+  undoThrow,
+} from "@/shell/session/gameRunner";
+import type { InProgressGame } from "@/shell/session/types";
 import type { ScoreboardHit, ThrowEffect } from "@/shared/types/game-module";
 import type { TeamColorId, ThrowRecord, ThrowSegment } from "@/shared/types/core";
 import { getTeamLabel } from "@/shared/teams/teamLabel";
-import { computeWinSummary } from "@/shell/stats/computeWinSummary";
-import { detectShanghai } from "@/shared/shanghai";
 import styles from "./PlayPage.module.css";
 
 function deriveTurnDots(
@@ -101,39 +102,29 @@ export function PlayPage() {
     [game?.gameTypeId],
   );
 
-  // Safety net for restored sessions where the win was already in throws[]
-  // — handleThrow captures live wins synchronously.
+  function finishGame(finished: InProgressGame, winnerTeamIds: string[]) {
+    if (winRecorded.current === finished.id) return;
+    winRecorded.current = finished.id;
+    dispatch({
+      type: "recordCompletedGame",
+      record: completedGameRecord(finished, winnerTeamIds),
+    });
+    navigate("/end", { replace: true });
+  }
+
+  // On load, rebuild the game from its throw list. The persisted engineState
+  // is only a cache, so this heals sessions saved by an older engine version
+  // and catches a win that is in throws[] but was never recorded.
   useEffect(() => {
     if (!game || !manifest) return;
-    const initCtx = makeInitContext(
-      game.teams,
-      game.resolvedSettings,
-      game.dartsPerPlayer,
-      game.maxTeamSize,
-    );
-    const replay = replayAll(
-      manifest,
-      initCtx,
-      game.turnOrder,
-      game.playerRotation,
-      game.throws,
-    );
-    if (replay.winnerTeamIds && winRecorded.current !== game.id) {
-      winRecorded.current = game.id;
-      const record: CompletedGameRecord = {
-        id: game.id,
-        gameTypeId: game.gameTypeId,
-        resolvedSettings: game.resolvedSettings,
-        teams: game.teams,
-        winnerTeamIds: replay.winnerTeamIds,
-        completedAt: new Date().toISOString(),
-        summary: computeWinSummary(
-          game.gameTypeId, game.teams, replay.winnerTeamIds, game.throws, replay.engineState,
-        ),
-        finalEngineState: replay.engineState,
-      };
-      dispatch({ type: "recordCompletedGame", record });
-      navigate("/end", { replace: true });
+    const rebuilt = replayGame(manifest, game);
+    if (rebuilt.winnerTeamIds) {
+      finishGame(rebuilt.game, rebuilt.winnerTeamIds);
+    } else if (
+      JSON.stringify([rebuilt.game.engineState, rebuilt.game.currentTurn]) !==
+      JSON.stringify([game.engineState, game.currentTurn])
+    ) {
+      dispatch({ type: "setInProgressGame", game: rebuilt.game });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.id]);
@@ -178,51 +169,18 @@ export function PlayPage() {
   function proceedWithThrow(throwRecord: ThrowRecord) {
     if (!game || !manifest) return;
 
-    const r = applyOne(manifest, game.engineState, game.currentTurn, throwRecord);
-    let won = r.effects.some((e) => e.kind === "gameWon");
-    const bust = r.effects.find((e): e is Extract<ThrowEffect, { kind: "bust" }> => e.kind === "bust");
-
-    const allThrows = [...game.throws, throwRecord];
-    const shanghaiEnabled = game.resolvedSettings["shanghai"] === true;
-    let shanghaiWin = false;
-    if (shanghaiEnabled && game.currentTurn.dartsThrownThisTurn === 2) {
-      const last3 = allThrows.slice(-3).filter((t) => t.playerId === throwRecord.playerId);
-      if (last3.length === 3 && detectShanghai(last3)) {
-        shanghaiWin = true;
-        won = true;
-      }
-    }
-
-    dispatch({
-      type: "appendThrow",
-      throw_: throwRecord,
-      engineState: r.state,
-      currentTurn: r.turn,
-    });
-
-    if (shanghaiWin) {
-      winRecorded.current = game.id;
-      const record: CompletedGameRecord = {
-        id: game.id,
-        gameTypeId: game.gameTypeId,
-        resolvedSettings: game.resolvedSettings,
-        teams: game.teams,
-        winnerTeamIds: [game.currentTurn.teamId],
-        completedAt: new Date().toISOString(),
-        summary: computeWinSummary(
-          game.gameTypeId, game.teams, [game.currentTurn.teamId], allThrows, r.state,
-        ),
-        finalEngineState: r.state,
-      };
-      dispatch({ type: "recordCompletedGame", record });
-      navigate("/end", { replace: true });
+    const r = recordThrow(manifest, game, throwRecord);
+    dispatch({ type: "setInProgressGame", game: r.game });
+    if (r.winnerTeamIds) {
+      finishGame(r.game, r.winnerTeamIds);
       return;
     }
 
+    const bust = r.effects.find((e): e is Extract<ThrowEffect, { kind: "bust" }> => e.kind === "bust");
     const turnAdvance = r.effects.find(
       (e): e is Extract<ThrowEffect, { kind: "turnAdvance" }> => e.kind === "turnAdvance",
     );
-    if (turnAdvance && turnAdvance.nextTeamId !== game.currentTurn.teamId && !won) {
+    if (turnAdvance && turnAdvance.nextTeamId !== game.currentTurn.teamId) {
       const nextTeam = game.teams.find((t) => t.id === turnAdvance.nextTeamId);
       const nextPlayer = nextTeam?.players.find((p) => p.id === turnAdvance.nextPlayerId);
       if (nextTeam && nextPlayer) {
@@ -245,35 +203,12 @@ export function PlayPage() {
       if (bust.label || bust.detail) {
         setBustBanner({ label: bust.label, detail: bust.detail });
       } else {
-        const sb = manifest.selectScoreboard(r.state);
+        const sb = manifest.selectScoreboard(r.game.engineState);
         const teamRow = sb.rows.find((row) => row.teamId === bust.teamId);
         const score = teamRow ? Number.parseInt(teamRow.primary, 10) : NaN;
         setBustBanner({
           detail: Number.isFinite(score) ? `score reverts to ${score}` : undefined,
         });
-      }
-    }
-
-    if (won) {
-      const winnerEff = r.effects.find(
-        (e): e is Extract<ThrowEffect, { kind: "gameWon" }> => e.kind === "gameWon",
-      );
-      if (winnerEff) {
-        winRecorded.current = game.id;
-        const record: CompletedGameRecord = {
-          id: game.id,
-          gameTypeId: game.gameTypeId,
-          resolvedSettings: game.resolvedSettings,
-          teams: game.teams,
-          winnerTeamIds: winnerEff.winnerTeamIds,
-          completedAt: new Date().toISOString(),
-          summary: computeWinSummary(
-            game.gameTypeId, game.teams, winnerEff.winnerTeamIds, allThrows, r.state,
-          ),
-          finalEngineState: r.state,
-        };
-        dispatch({ type: "recordCompletedGame", record });
-        navigate("/end", { replace: true });
       }
     }
   }
@@ -372,23 +307,9 @@ export function PlayPage() {
 
   function handleUndo() {
     if (!game || !manifest) return;
-    if (game.throws.length === 0) return;
     if (bustBanner) return;
-    // Replay from start through throws[0..n-1].
-    const initCtx = makeInitContext(
-      game.teams,
-      game.resolvedSettings,
-      game.dartsPerPlayer,
-      game.maxTeamSize,
-    );
-    const newThrows = game.throws.slice(0, -1);
-    const replay = replayAll(
-      manifest,
-      initCtx,
-      game.turnOrder,
-      game.playerRotation,
-      newThrows,
-    );
+    const undone = undoThrow(manifest, game);
+    if (!undone) return;
     if (fadeTimerRef.current !== null) {
       window.clearTimeout(fadeTimerRef.current);
       fadeTimerRef.current = null;
@@ -398,36 +319,18 @@ export function PlayPage() {
       throwDotsRef.current[throwDotsRef.current.length - 1] ?? null;
     throwDotsRef.current = throwDotsRef.current.slice(0, -1);
     redoDotsRef.current = [...redoDotsRef.current, poppedDot];
-    setTurnDots(deriveTurnDots(throwDotsRef.current, replay.currentTurn.dartsThrownThisTurn));
+    setTurnDots(deriveTurnDots(throwDotsRef.current, undone.currentTurn.dartsThrownThisTurn));
     // Pre-empt the turn-flip fade effect: this transition is from undo,
     // not a natural turn end, so the previous count baseline tracks the new state.
-    prevDartsCountRef.current = replay.currentTurn.dartsThrownThisTurn;
-    dispatch({
-      type: "popThrow",
-      engineState: replay.engineState,
-      currentTurn: replay.currentTurn,
-    });
+    prevDartsCountRef.current = undone.currentTurn.dartsThrownThisTurn;
+    dispatch({ type: "setInProgressGame", game: undone });
   }
 
   function handleRedo() {
     if (!game || !manifest) return;
-    if (game.redoStack.length === 0) return;
     if (bustBanner) return;
-    const popped = game.redoStack[game.redoStack.length - 1]!;
-    const initCtx = makeInitContext(
-      game.teams,
-      game.resolvedSettings,
-      game.dartsPerPlayer,
-      game.maxTeamSize,
-    );
-    const newThrows = [...game.throws, popped];
-    const replay = replayAll(
-      manifest,
-      initCtx,
-      game.turnOrder,
-      game.playerRotation,
-      newThrows,
-    );
+    const r = redoThrow(manifest, game);
+    if (!r) return;
     if (fadeTimerRef.current !== null) {
       window.clearTimeout(fadeTimerRef.current);
       fadeTimerRef.current = null;
@@ -437,30 +340,10 @@ export function PlayPage() {
       redoDotsRef.current[redoDotsRef.current.length - 1] ?? null;
     redoDotsRef.current = redoDotsRef.current.slice(0, -1);
     throwDotsRef.current = [...throwDotsRef.current, restoredDot];
-    setTurnDots(deriveTurnDots(throwDotsRef.current, replay.currentTurn.dartsThrownThisTurn));
-    prevDartsCountRef.current = replay.currentTurn.dartsThrownThisTurn;
-    dispatch({
-      type: "popRedo",
-      engineState: replay.engineState,
-      currentTurn: replay.currentTurn,
-    });
-    if (replay.winnerTeamIds && winRecorded.current !== game.id) {
-      winRecorded.current = game.id;
-      const record: CompletedGameRecord = {
-        id: game.id,
-        gameTypeId: game.gameTypeId,
-        resolvedSettings: game.resolvedSettings,
-        teams: game.teams,
-        winnerTeamIds: replay.winnerTeamIds,
-        completedAt: new Date().toISOString(),
-        summary: computeWinSummary(
-          game.gameTypeId, game.teams, replay.winnerTeamIds, newThrows, replay.engineState,
-        ),
-        finalEngineState: replay.engineState,
-      };
-      dispatch({ type: "recordCompletedGame", record });
-      navigate("/end", { replace: true });
-    }
+    setTurnDots(deriveTurnDots(throwDotsRef.current, r.game.currentTurn.dartsThrownThisTurn));
+    prevDartsCountRef.current = r.game.currentTurn.dartsThrownThisTurn;
+    dispatch({ type: "setInProgressGame", game: r.game });
+    if (r.winnerTeamIds) finishGame(r.game, r.winnerTeamIds);
   }
 
   return (

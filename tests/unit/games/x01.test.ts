@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { initX01, applyThrowX01, type X01EngineState } from "@/games/x01/engine";
 import type { Team, ThrowRecord } from "@/shared/types/core";
+import { gameRandom } from "@/shared/random";
 import type { InitContext } from "@/shared/types/game-module";
 
 function makeTeams(): Team[] {
@@ -24,6 +25,7 @@ function makeCtx(teams: Team[], settings: Record<string, boolean>): InitContext 
   return {
     teams,
     resolvedSettings: settings,
+    random: gameRandom("test", "init"),
     helpers: {
       teamAllotment: () => 3,
       allotmentForPlayer: () => 3,

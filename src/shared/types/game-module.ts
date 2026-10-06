@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Team, ThrowRecord, ThrowSegment, GameTypeId } from "./core";
+import type { RandomFn } from "../random";
 
 export type SettingDefinition =
   | { key: string; label: string; type: "toggle"; default: boolean }
@@ -34,10 +35,21 @@ export interface ApplyThrowResult<EngineState> {
 export interface InitContext {
   teams: ReadonlyArray<Team>;
   resolvedSettings: ResolvedSettings;
+  /** Seeded randomness — engines must use this, never `Math.random()`. */
+  random: RandomFn;
   helpers: {
     allotmentForPlayer(teamId: string, playerIndexInTeam: number): number;
     teamAllotment(teamId: string): number;
   };
+}
+
+export interface ThrowContext {
+  /**
+   * Seeded randomness for this throw — engines must use this, never
+   * `Math.random()`, so that replaying the same throws (undo/redo, restore)
+   * yields the same state.
+   */
+  random: RandomFn;
 }
 
 export interface ScoreboardSummary {
@@ -121,8 +133,17 @@ export interface GameManifest<EngineState = unknown> {
   settingsSchema: ReadonlyArray<SettingDefinition>;
   schemaVersion: number;
 
+  /**
+   * Engines MUST be pure: the same (ctx, throws) must always produce the same
+   * state, and `applyThrow` must not mutate `state`. Undo/redo and session
+   * restore rely on this — they rebuild the game by replaying its throws.
+   */
   init(ctx: InitContext): EngineState;
-  applyThrow(state: EngineState, throw_: ThrowRecord): ApplyThrowResult<EngineState>;
+  applyThrow(
+    state: EngineState,
+    throw_: ThrowRecord,
+    ctx: ThrowContext,
+  ): ApplyThrowResult<EngineState>;
   selectScoreboard(state: EngineState): ScoreboardSummary;
   view?: (props: {
     state: EngineState;
@@ -130,6 +151,11 @@ export interface GameManifest<EngineState = unknown> {
     teams: ReadonlyArray<Team>;
     onScoreboardHit?: (hit: ScoreboardHit) => void;
     scoreboardExpanded?: boolean;
+  }) => ReactNode;
+  /** Extra game-specific content shown on the end-of-game results page. */
+  resultsView?: (props: {
+    state: EngineState;
+    teams: ReadonlyArray<Team>;
   }) => ReactNode;
   getTurnHint(state: EngineState, teamId: string): { label: string; value: string } | null;
   getBoardHints(state: EngineState): BoardHints;

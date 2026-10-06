@@ -16,6 +16,7 @@ import {
   type TurnPointer,
   type TurnAdvanceResult,
 } from "@/shared/turn/turn-helpers";
+import { shuffle } from "@/shared/random";
 
 export const KILLER_THRESHOLD = 3;
 
@@ -118,11 +119,10 @@ export function initKiller(ctx: InitContext): KillerEngineState {
   let phase: "number-selection" | "playing" = "number-selection";
 
   if (numberSelection === "random") {
-    const pool = Array.from({ length: 20 }, (_, i) => i + 1);
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j]!, pool[i]!];
-    }
+    const pool = shuffle(
+      Array.from({ length: 20 }, (_, i) => i + 1),
+      ctx.random,
+    );
     for (let i = 0; i < teams.length; i++) {
       assignments[teams[i]!.id] = pool[i]!;
     }

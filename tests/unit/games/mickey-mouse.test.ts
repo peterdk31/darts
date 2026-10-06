@@ -8,6 +8,7 @@ import {
   type MickeyEngineState,
 } from "@/games/mickey-mouse/engine";
 import type { Team, ThrowRecord } from "@/shared/types/core";
+import { gameRandom } from "@/shared/random";
 import type { InitContext } from "@/shared/types/game-module";
 
 function makeTeams(): Team[] {
@@ -39,6 +40,7 @@ function ctx(
       dtRequireTargetRange: false,
       ...overrides,
     },
+    random: gameRandom("test", "init"),
     helpers: { teamAllotment: () => 3, allotmentForPlayer: () => 3 },
   };
 }

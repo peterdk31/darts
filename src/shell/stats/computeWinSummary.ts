@@ -5,6 +5,7 @@ import { CRICKET_TARGETS } from "@/games/cricket/engine";
 import type { MickeyEngineState } from "@/games/mickey-mouse/engine";
 import type { ATCEngineState } from "@/games/around-the-clock/engine";
 import type { LumberjackEngineState } from "@/games/lumberjack/engine";
+import type { MinesweeperEngineState } from "@/games/minesweeper/engine";
 
 export interface TeamRanking {
   teamId: string;
@@ -70,6 +71,9 @@ export function computeWinSummary(
       break;
     case "lumberjack":
       rankings = rankLumberjack(teams, winnerTeamIds, engineState as LumberjackEngineState);
+      break;
+    case "minesweeper":
+      rankings = rankMinesweeper(teams, winnerTeamIds, engineState as MinesweeperEngineState);
       break;
     default:
       rankings = defaultRank(teams, winnerTeamIds);
@@ -201,6 +205,29 @@ function rankLumberjack(
   const entries = teams.map((t) => ({
     teamId: t.id,
     score: state.scoreByTeam[t.id] ?? 0,
+    isWinner: winnerTeamIds.includes(t.id),
+  }));
+
+  entries.sort((a, b) => {
+    if (a.isWinner !== b.isWinner) return a.isWinner ? -1 : 1;
+    return b.score - a.score;
+  });
+
+  let rank = 1;
+  return entries.map((e, i) => {
+    if (i > 0 && entries[i - 1]!.score !== e.score) rank = i + 1;
+    return { teamId: e.teamId, rank, label: `${e.score} pts` };
+  });
+}
+
+function rankMinesweeper(
+  teams: ReadonlyArray<Team>,
+  winnerTeamIds: string[],
+  state: MinesweeperEngineState,
+): TeamRanking[] {
+  const entries = teams.map((t) => ({
+    teamId: t.id,
+    score: state.scores[t.id] ?? 0,
     isWinner: winnerTeamIds.includes(t.id),
   }));
 

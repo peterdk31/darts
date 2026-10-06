@@ -4,9 +4,7 @@ import { Button } from "@/shared/components/Button";
 import { useNavigate, useParams } from "@/shared/routing/router";
 import { useSession } from "@/shell/session/useSession";
 import type { ResolvedSettings, SettingDefinition } from "@/shared/types/game-module";
-import { maxTeamSize } from "@/shared/turn/turn-helpers";
-import { makeInitContext, initialCurrentTurn } from "@/shell/session/replay";
-import type { InProgressGame } from "@/shell/session/types";
+import { createGame } from "@/shell/session/gameRunner";
 import { AbandonConfirmModal } from "@/shell/components/AbandonConfirmModal";
 import styles from "./GameSettingsPage.module.css";
 
@@ -69,34 +67,12 @@ export function GameSettingsPage() {
 
   function doStart() {
     if (!manifest) return;
-    const teams = state.teams;
-    const turnOrder = teams.map((t) => t.id);
-    const playerRotation: Record<string, string[]> = {};
-    for (const t of teams) playerRotation[t.id] = t.players.map((p) => p.id);
-    const mts = maxTeamSize(teams);
-    const initCtx = makeInitContext(teams, settings, manifest.dartsPerPlayer, mts);
-    const engineState = manifest.init(initCtx);
-
-    const game: InProgressGame = {
+    const game = createGame(manifest, {
       id: uid("game"),
-      gameTypeId: manifest.id,
+      teams: state.teams,
       resolvedSettings: settings,
-      teams: teams.map((t) => ({
-        ...t,
-        players: t.players.map((p) => ({ ...p })),
-      })),
-      dartsPerPlayer: manifest.dartsPerPlayer,
-      maxTeamSize: mts,
-      turnOrder,
-      playerRotation,
-      throws: [],
-      redoStack: [],
-      engineState,
-      engineSchemaVersion: manifest.schemaVersion,
-      currentTurn: initialCurrentTurn(turnOrder, playerRotation),
-      status: "in-progress",
       startedAt: new Date().toISOString(),
-    };
+    });
     dispatch({ type: "setInProgressGame", game });
     setPendingStart(false);
     navigate("/play");

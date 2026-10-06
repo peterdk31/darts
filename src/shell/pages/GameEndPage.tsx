@@ -77,6 +77,12 @@ export function GameEndPage() {
         />
       )}
 
+      {manifest?.resultsView && lastRecord.finalEngineState !== undefined &&
+        manifest.resultsView({
+          state: lastRecord.finalEngineState,
+          teams: lastRecord.teams,
+        })}
+
       <SessionTally
         teams={state.teams.length > 0 ? state.teams : lastRecord.teams}
         history={state.history}
