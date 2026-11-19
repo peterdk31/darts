@@ -28,6 +28,29 @@ export interface ATCEngineState {
   pointer: TurnPointer;
   status: "in-progress" | "won";
   winnerTeamIds: string[] | null;
+  /** Reverse order: 20, 19, ... 1, then bull. Optional for older saved states. */
+  reverse?: boolean;
+}
+
+/** Number targeted at a numeric progress index (0..19). */
+function numberAt(state: Pick<ATCEngineState, "reverse">, progress: number): number {
+  return state.reverse ? 20 - progress : progress + 1;
+}
+
+/** Target at a progress index: a number for 0..19, bull for 20. */
+export function targetAtATC(
+  state: Pick<ATCEngineState, "reverse">,
+  progress: number,
+): number | "bull" {
+  return progress < 20 ? numberAt(state, progress) : "bull";
+}
+
+/** Labels for each progress index, in play order (bull always last). */
+export function targetLabelsATC(state: Pick<ATCEngineState, "reverse">): string[] {
+  return [
+    ...Array.from({ length: 20 }, (_, i) => String(numberAt(state, i))),
+    "Bull",
+  ];
 }
 
 function hits(throw_: ThrowRecord): { num: number | "bull" } | null {
@@ -53,6 +76,7 @@ export function initATC(ctx: InitContext): ATCEngineState {
     pointer: initialPointer(),
     status: "in-progress",
     winnerTeamIds: null,
+    reverse: ctx.resolvedSettings["reverse"] === true,
   };
 }
 
@@ -63,7 +87,7 @@ export function applyThrowATC(
   if (state.status === "won") return { state, effects: [] };
   const teamId = state.turnOrder[state.pointer.teamIdx]!;
   const progress = state.progressByTeam[teamId] ?? 0;
-  const target: number | "bull" = progress < 20 ? progress + 1 : "bull";
+  const target = targetAtATC(state, progress);
   const h = hits(throw_);
   let nextProgress = progress;
   let won = false;
@@ -137,7 +161,7 @@ export function applyThrowATC(
 export function selectScoreboardATC(state: ATCEngineState): ScoreboardSummary {
   const rows = state.teams.map((t) => {
     const p = state.progressByTeam[t.id] ?? 0;
-    const next = p < 20 ? `${p + 1}` : p === 20 ? "Bull" : "—";
+    const next = p < 20 ? String(numberAt(state, p)) : p === 20 ? "Bull" : "—";
     return {
       teamId: t.id,
       primary: `next: ${next} (${p}/21)`,
@@ -150,13 +174,13 @@ export function selectScoreboardATC(state: ATCEngineState): ScoreboardSummary {
 export function getTurnHintATC(state: ATCEngineState, teamId: string): { label: string; value: string } | null {
   const p = state.progressByTeam[teamId] ?? 0;
   if (p >= ATC_TARGETS_COUNT) return null;
-  return { label: "Aim for", value: p < 20 ? String(p + 1) : "Bull" };
+  return { label: "Aim for", value: p < 20 ? String(numberAt(state, p)) : "Bull" };
 }
 
 export function getBoardHintsATC(state: ATCEngineState): BoardHints {
   const teamId = state.turnOrder[state.pointer.teamIdx]!;
   const p = state.progressByTeam[teamId] ?? 0;
-  const target: DartSegment = p < 20 ? ((p + 1) as DartSegment) : "bull";
+  const target: DartSegment = p < 20 ? (numberAt(state, p) as DartSegment) : "bull";
   return { highlights: [{ segments: [target] }] };
 }
 
@@ -165,7 +189,7 @@ export function getQuickInputsATC(state: ATCEngineState): QuickInputGroup[] | nu
   const teamId = state.turnOrder[state.pointer.teamIdx] ?? "";
   const p = state.progressByTeam[teamId] ?? 0;
   if (p < 20) {
-    const n = p + 1;
+    const n = numberAt(state, p);
     return [{
       label: `Target: ${n}  (${p}/${ATC_TARGETS_COUNT})`,
       actions: [

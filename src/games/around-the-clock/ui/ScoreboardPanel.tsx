@@ -2,7 +2,7 @@ import type { ResolvedSettings } from "@/shared/types/game-module";
 import type { Team } from "@/shared/types/core";
 import { getTeamLabel } from "@/shared/teams/teamLabel";
 import { CollapsibleScoreboard, ScoreSummary } from "@/shared/components/CollapsibleScoreboard";
-import { type ATCEngineState } from "../engine";
+import { targetLabelsATC, type ATCEngineState } from "../engine";
 import styles from "./ScoreboardPanel.module.css";
 
 interface Props {
@@ -12,12 +12,8 @@ interface Props {
   scoreboardExpanded?: boolean;
 }
 
-const ATC_LABELS: string[] = [
-  ...Array.from({ length: 20 }, (_, i) => String(i + 1)),
-  "Bull",
-];
-
 export function ScoreboardPanel({ state, teams, scoreboardExpanded }: Props) {
+  const ATC_LABELS = targetLabelsATC(state);
   return (
     <CollapsibleScoreboard
       expanded={scoreboardExpanded}
