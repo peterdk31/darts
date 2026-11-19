@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   applyThrowATC,
+  getBoardHintsATC,
+  getTurnHintATC,
   initATC,
   type ATCEngineState,
 } from "@/games/around-the-clock/engine";
@@ -152,5 +154,41 @@ describe("around-the-clock engine", () => {
     shorter = throwAtCurrent(shorter, 2, 1, 2);
     expect(shorter.progressByTeam["A"]).toBe(2);
     expect(a.progressByTeam["A"]).toBe(3);
+  });
+
+  describe("reverse order", () => {
+    function reverseCtx(teams: Team[]): InitContext {
+      return { ...ctx(teams), resolvedSettings: { reverse: true } };
+    }
+
+    it("starts at 20 and counts down", () => {
+      let s = initATC(reverseCtx(makeOneTeam()));
+      expect(getTurnHintATC(s, "A")).toEqual({ label: "Aim for", value: "20" });
+      expect(getBoardHintsATC(s).highlights?.[0]?.segments).toEqual([20]);
+      s = throwAtCurrent(s, 1, 1, 1); // 1 is not the target in reverse
+      expect(s.progressByTeam["A"]).toBe(0);
+      s = throwAtCurrent(s, 20, 1, 20);
+      expect(s.progressByTeam["A"]).toBe(1);
+      s = throwAtCurrent(s, 19, 3, 57); // T19 → skips 18, 17
+      expect(s.progressByTeam["A"]).toBe(4);
+      expect(getTurnHintATC(s, "A")!.value).toBe("16");
+    });
+
+    it("bull is still the final target after 1", () => {
+      let s = initATC(reverseCtx(makeOneTeam()));
+      for (let n = 20; n >= 1; n--) s = throwAtCurrent(s, n, 1, n);
+      expect(s.progressByTeam["A"]).toBe(20);
+      expect(getTurnHintATC(s, "A")!.value).toBe("Bull");
+      s = throwAtCurrent(s, "outer-bull", 1, 25);
+      expect(s.status).toBe("won");
+    });
+
+    it("multiplier cannot skip the bull", () => {
+      let s = initATC(reverseCtx(makeOneTeam()));
+      for (let n = 20; n >= 3; n--) s = throwAtCurrent(s, n, 1, n);
+      s = throwAtCurrent(s, 2, 3, 6);
+      expect(s.progressByTeam["A"]).toBe(20);
+      expect(s.status).toBe("in-progress");
+    });
   });
 });

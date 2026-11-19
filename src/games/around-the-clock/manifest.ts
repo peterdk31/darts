@@ -15,7 +15,15 @@ export const aroundTheClockManifest: GameManifest<ATCEngineState> = {
   id: "around-the-clock",
   displayName: "Around the Clock",
   dartsPerPlayer: 3,
-  settingsSchema: [shanghaiSetting],
+  settingsSchema: [
+    {
+      key: "reverse",
+      label: "Reverse order (20 → 1, then Bull)",
+      type: "toggle",
+      default: false,
+    },
+    shanghaiSetting,
+  ],
   schemaVersion: 1,
   init: initATC,
   applyThrow: applyThrowATC,
